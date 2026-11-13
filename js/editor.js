@@ -5,6 +5,29 @@ const uid = () => 'b' + Math.random().toString(36).slice(2, 9);
 
 const STORAGE_KEY = 'block-editor:v1';
 
+function sanitizeRich(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = String(html ?? '');
+  tpl.content.querySelectorAll('script, style, iframe, object, embed, link, meta').forEach(el => el.remove());
+  tpl.content.querySelectorAll('*').forEach(el => {
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase();
+      const value = String(attr.value).trim().toLowerCase();
+      if (name.startsWith('on')) el.removeAttribute(attr.name);
+      else if ((name === 'href' || name === 'src') && (value.startsWith('javascript:') || value.startsWith('data:text/html'))) el.removeAttribute(attr.name);
+    }
+  });
+  return tpl.innerHTML;
+}
+
+function sanitizePageRich(p) {
+  const bt = BLOCK_TYPES[p.type];
+  if (!bt || !bt.fields) return;
+  for (const f of bt.fields) {
+    if (f.type === 'rich') p.props[f.key] = sanitizeRich(p.props[f.key]);
+  }
+}
+
 let page = null;
 let selectedId = null;
 let history = [];
@@ -75,15 +98,15 @@ function renderCanvas() {
   }
 
   page.blocks.forEach((b, i) => {
-    const t = BLOCK_TYPES[b.type];
-    if (!t) return;
+    const bt = BLOCK_TYPES[b.type];
+    if (!bt) return;
     const wrap = document.createElement('div');
     wrap.className = 'bw' + (b.id === selectedId && !previewMode ? ' selected' : '');
     wrap.dataset.id = b.id;
     wrap.draggable = !previewMode;
     wrap.innerHTML = `
       <div class="bw-bar">
-        <span class="bw-name">${i + 1}. ${t.name}</span>
+        <span class="bw-name">${i + 1}. ${bt.name}</span>
         <span class="bw-actions">
           <button data-act="up" title="${t('title.up')}">↑</button>
           <button data-act="down" title="${t('title.down')}">↓</button>
@@ -91,7 +114,7 @@ function renderCanvas() {
           <button data-act="del" title="${t('title.del')}">✕</button>
         </span>
       </div>
-      <div class="bw-body">${t.render(b.props)}</div>`;
+      <div class="bw-body">${bt.render(b.props)}</div>`;
     canvas.appendChild(wrap);
   });
 }
@@ -99,10 +122,10 @@ function renderCanvas() {
 function renderLibrary() {
   const box = $('#library');
   box.innerHTML = '';
-  for (const [type, t] of Object.entries(BLOCK_TYPES)) {
+  for (const [type, bt] of Object.entries(BLOCK_TYPES)) {
     const el = document.createElement('button');
     el.className = 'lib-item';
-    el.innerHTML = `<span class="lib-icon">${t.icon}</span><span>${t.name}</span>`;
+    el.innerHTML = `<span class="lib-icon">${bt.icon}</span><span>${bt.name}</span>`;
     el.addEventListener('click', () => addBlock(type));
     box.appendChild(el);
   }
@@ -117,7 +140,8 @@ function addBlock(type) {
     selectedId = b.id;
   }, { inspector: true });
   requestAnimationFrame(() => {
-    $(`.bw[data-id="${b.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = $(`.bw[data-id="${b.id}"]`);
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 }
 
@@ -139,6 +163,20 @@ function fieldHtml(f, props, idBase) {
   if (f.type === 'select') {
     return `<label class="fld"><span>${f.label}</span><select ${attrs}>${f.options.map(o =>
       `<option value="${esc(o.value)}" ${String(val) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`;
+  }
+  if (f.type === 'rich') {
+    return `<div class="fld"><span>${f.label}</span>
+  <div class="rich-toolbar">
+    <button type="button" data-cmd="bold" title="${t('title.bold')}"><b>B</b></button>
+    <button type="button" data-cmd="italic" title="${t('title.italic')}"><i>I</i></button>
+    <button type="button" data-cmd="underline" title="${t('title.underline')}"><u>U</u></button>
+    <button type="button" data-cmd="strikeThrough" title="${t('title.strike')}"><s>S</s></button>
+    <button type="button" data-cmd="createLink" title="${t('title.link')}">🔗</button>
+    <button type="button" data-cmd="unlink" title="${t('title.unlink')}">⛓</button>
+    <button type="button" data-cmd="removeFormat" title="${t('title.clearFormat')}">⌫</button>
+  </div>
+  <div class="rich-editor" contenteditable="true" data-key="${f.key}">${props[f.key] ?? ''}</div>
+</div>`;
   }
   if (f.type === 'range') {
     return `<label class="fld"><span>${f.label} <b data-out="${id}">${esc(val)}${f.unit || ''}</b></span><input type="range" min="${f.min}" max="${f.max}" step="${f.step || 1}" value="${esc(val)}" ${attrs}></label>`;
@@ -176,9 +214,9 @@ function renderInspector() {
     box.innerHTML = `<p class="hint">${t('app.inspectorHint')}</p>`;
     return;
   }
-  const t = BLOCK_TYPES[b.type];
+  const bt = BLOCK_TYPES[b.type];
   const idBase = `p-${b.id}`;
-  box.innerHTML = `<h3>${t.icon} ${t.name}</h3>` + (t.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('');
+  box.innerHTML = `<h3>${bt.icon} ${bt.name}</h3>` + (bt.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('');
 }
 
 $('#canvas').addEventListener('click', e => {
@@ -265,7 +303,24 @@ $('#canvas').addEventListener('dragend', () => {
 });
 
 $('#inspector').addEventListener('focusin', e => {
-  if (e.target.matches('input, textarea, select')) snapshot();
+  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) snapshot();
+});
+
+$('#inspector').addEventListener('mousedown', e => {
+  const btn = e.target.closest('.rich-toolbar button');
+  if (!btn) return;
+  e.preventDefault();
+  const editor = btn.closest('.fld').querySelector('.rich-editor');
+  editor.focus();
+  const cmd = btn.dataset.cmd;
+  if (cmd === 'createLink') {
+    const url = prompt(t('prompt.linkUrl'), 'https://');
+    if (!url) return;
+    document.execCommand('createLink', false, url);
+  } else {
+    document.execCommand(cmd, false, null);
+  }
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
 $('#inspector').addEventListener('input', e => {
@@ -282,7 +337,9 @@ $('#inspector').addEventListener('input', e => {
     return;
   }
   if (e.target.dataset.key) {
-    b.props[e.target.dataset.key] = e.target.value;
+    b.props[e.target.dataset.key] = e.target.classList.contains('rich-editor')
+      ? sanitizeRich(e.target.innerHTML)
+      : e.target.value;
     persist();
     renderCanvas();
     const out = $(`[data-out="${e.target.id}"]`);
@@ -386,6 +443,7 @@ $('#file-json').addEventListener('change', e => {
       if (!data || !Array.isArray(data.blocks)) throw new Error('bad format');
       snapshot();
       page = data;
+      page.blocks.forEach(sanitizePageRich);
       selectedId = null;
       persist();
       renderAll();
@@ -443,6 +501,7 @@ function init() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { saved = null; }
   page = saved && Array.isArray(saved.blocks) ? saved : samplePage();
+  page.blocks.forEach(sanitizePageRich);
 
   renderLibrary();
   renderAll();
