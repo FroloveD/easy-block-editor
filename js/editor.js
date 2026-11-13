@@ -67,10 +67,10 @@ function renderCanvas() {
   const canvas = $('#canvas');
   canvas.innerHTML = '';
   $('#page-title-input').value = page.title;
-  document.title = page.title ? `${page.title} — редактор` : 'Редактор';
+  document.title = page.title ? `${page.title} — ${t('app.editorSuffix')}` : t('app.title');
 
   if (!page.blocks.length) {
-    canvas.innerHTML = '<div class="empty">Страница пуста. Добавьте блок из библиотеки слева.</div>';
+    canvas.innerHTML = `<div class="empty">${t('app.empty')}</div>`;
     return;
   }
 
@@ -85,10 +85,10 @@ function renderCanvas() {
       <div class="bw-bar">
         <span class="bw-name">${i + 1}. ${t.name}</span>
         <span class="bw-actions">
-          <button data-act="up" title="Выше">↑</button>
-          <button data-act="down" title="Ниже">↓</button>
-          <button data-act="dup" title="Дублировать">⧉</button>
-          <button data-act="del" title="Удалить">✕</button>
+          <button data-act="up" title="${t('title.up')}">↑</button>
+          <button data-act="down" title="${t('title.down')}">↓</button>
+          <button data-act="dup" title="${t('title.dup')}">⧉</button>
+          <button data-act="del" title="${t('title.del')}">✕</button>
         </span>
       </div>
       <div class="bw-body">${t.render(b.props)}</div>`;
@@ -151,11 +151,11 @@ function itemsHtml(f, props, idBase) {
   const rows = items.map((item, i) => `
     <div class="item-card" data-fkey="${f.key}" data-idx="${i}">
       <div class="item-head">
-        <span>${esc(f.itemLabel ? f.itemLabel(item, i) : `Элемент ${i + 1}`)}</span>
+        <span>${esc(f.itemLabel ? f.itemLabel(item, i) : t('item.n', { n: i + 1 }))}</span>
         <span class="item-actions">
-          <button data-iact="up" title="Выше">↑</button>
-          <button data-iact="down" title="Ниже">↓</button>
-          <button data-iact="del" title="Удалить">✕</button>
+          <button data-iact="up" title="${t('title.up')}">↑</button>
+          <button data-iact="down" title="${t('title.down')}">↓</button>
+          <button data-iact="del" title="${t('title.del')}">✕</button>
         </span>
       </div>
       ${f.itemFields.map(sf => {
@@ -166,14 +166,14 @@ function itemsHtml(f, props, idBase) {
         return `<label class="fld"><span>${sf.label}</span><input type="text" value="${esc(v)}" data-ikey="${sf.key}"></label>`;
       }).join('')}
     </div>`).join('');
-  return `<div class="fld fld-items"><span>${f.label}</span><div class="items-list">${rows}</div><button class="btn-ghost" data-iact="add" data-fkey="${f.key}">+ Добавить</button></div>`;
+  return `<div class="fld fld-items"><span>${f.label}</span><div class="items-list">${rows}</div><button class="btn-ghost" data-iact="add" data-fkey="${f.key}">${t('items.add')}</button></div>`;
 }
 
 function renderInspector() {
   const box = $('#inspector');
   const b = current();
   if (!b || previewMode) {
-    box.innerHTML = '<p class="hint">Выберите блок на странице, чтобы отредактировать его содержимое.</p>';
+    box.innerHTML = `<p class="hint">${t('app.inspectorHint')}</p>`;
     return;
   }
   const t = BLOCK_TYPES[b.type];
@@ -323,7 +323,7 @@ $('#page-title-input').addEventListener('focusin', snapshot);
 $('#page-title-input').addEventListener('input', e => {
   page.title = e.target.value;
   persist();
-  document.title = page.title ? `${page.title} — редактор` : 'Редактор';
+  document.title = page.title ? `${page.title} — ${t('app.editorSuffix')}` : t('app.title');
 });
 
 $('#btn-undo').addEventListener('click', undo);
@@ -332,7 +332,7 @@ $('#btn-redo').addEventListener('click', redo);
 $('#btn-preview').addEventListener('click', () => {
   previewMode = !previewMode;
   document.body.classList.toggle('preview', previewMode);
-  $('#btn-preview').textContent = previewMode ? 'Редактировать' : 'Превью';
+  $('#btn-preview').textContent = previewMode ? t('app.edit') : t('app.preview');
   if (previewMode) selectedId = null;
   renderCanvas();
   renderInspector();
@@ -390,14 +390,14 @@ $('#file-json').addEventListener('change', e => {
       persist();
       renderAll();
     } catch {
-      alert('Не удалось прочитать файл: ожидается JSON, экспортированный этим редактором.');
+      alert(t('alert.importError'));
     }
   };
   reader.readAsText(file);
 });
 
 $('#btn-clear').addEventListener('click', () => {
-  if (!confirm('Удалить все блоки со страницы?')) return;
+  if (!confirm(t('confirm.clear'))) return;
   mutate(() => { page.blocks = []; selectedId = null; }, { inspector: true });
 });
 
@@ -418,19 +418,19 @@ document.addEventListener('keydown', e => {
 function samplePage() {
   const mk = (type, patch = {}) => ({ id: uid(), type, props: Object.assign(BLOCK_TYPES[type].defaults(), patch) });
   return {
-    title: 'Портфолио',
+    title: t('sample.title'),
     blocks: [
       mk('hero', {
-        title: 'Дмитрий Ушаров',
-        subtitle: 'Графический дизайнер: айдентика, 3D-графика и концепт-арт. Помогаю брендам обрести визуальный голос.',
-        buttonText: 'Смотреть работы',
+        title: t('sample.heroTitle'),
+        subtitle: t('sample.heroSubtitle'),
+        buttonText: t('sample.heroButton'),
         buttonLink: '#works',
       }),
-      mk('cards', { title: 'Направления' }),
-      mk('gallery', { title: 'Избранные работы' }),
+      mk('cards', { title: t('sample.cardsTitle') }),
+      mk('gallery', { title: t('sample.galleryTitle') }),
       mk('faq'),
       mk('cta'),
-      mk('footer', { text: '© 2025 Дмитрий Ушаров' }),
+      mk('footer', { text: t('sample.footerText') }),
     ],
   };
 }

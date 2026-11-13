@@ -10,28 +10,30 @@
   <header class="topbar">
     <div class="topbar-group">
       <span class="logo">Blocks</span>
-      <input id="page-title-input" class="page-title" type="text" placeholder="Название страницы">
+      <input id="page-title-input" class="page-title" type="text" data-i18n-placeholder="app.pageTitlePlaceholder">
     </div>
     <div class="topbar-group">
-      <button class="device-btn active" data-device="desktop" title="Desktop">🖥</button>
-      <button class="device-btn" data-device="mobile" title="Mobile">📱</button>
-      <button id="btn-preview" class="btn">Превью</button>
+      <button class="device-btn active" data-device="desktop" data-i18n-title="title.desktop">🖥</button>
+      <button class="device-btn" data-device="mobile" data-i18n-title="title.mobile">📱</button>
+      <button class="device-btn lang-btn" data-lang="ru">RU</button>
+      <button class="device-btn lang-btn" data-lang="en">EN</button>
+      <button id="btn-preview" class="btn" data-i18n="app.preview">Превью</button>
     </div>
     <div class="topbar-group">
-      <button id="btn-undo" class="btn btn-icon" title="Отменить (Ctrl+Z)">↶</button>
-      <button id="btn-redo" class="btn btn-icon" title="Вернуть (Ctrl+Shift+Z)">↷</button>
-      <button id="btn-export" class="btn btn-primary">Экспорт HTML</button>
+      <button id="btn-undo" class="btn btn-icon" data-i18n-title="title.undo">↶</button>
+      <button id="btn-redo" class="btn btn-icon" data-i18n-title="title.redo">↷</button>
+      <button id="btn-export" class="btn btn-primary" data-i18n="app.exportHtml">Экспорт HTML</button>
       <button id="btn-json" class="btn">JSON ↓</button>
       <button id="btn-import" class="btn">JSON ↑</button>
       <input type="file" id="file-json" accept=".json,application/json" hidden>
-      <button id="btn-clear" class="btn btn-danger">Очистить</button>
+      <button id="btn-clear" class="btn btn-danger" data-i18n="app.clear">Очистить</button>
     </div>
   </header>
 
   <main class="workspace">
     <aside class="panel left">
-      <h2>Блоки</h2>
-      <p class="panel-hint">Клик добавляет блок после выбранного.</p>
+      <h2 data-i18n="app.blocks">Блоки</h2>
+      <p class="panel-hint" data-i18n="app.blocksHint">Клик добавляет блок после выбранного.</p>
       <div id="library"></div>
     </aside>
 
@@ -42,12 +44,13 @@
     </section>
 
     <aside class="panel right">
-      <h2>Свойства</h2>
+      <h2 data-i18n="app.properties">Свойства</h2>
       <div id="inspector"></div>
     </aside>
   </main>
 
   <script src="js/site-css.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/blocks.js"></script>
   <script src="js/editor.js"></script>
 </body>

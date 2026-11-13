@@ -6,29 +6,29 @@ const ph = (label, bg = '#e3e6f0', fg = '#5b6478') =>
   );
 
 const ALIGN = [
-  { value: 'left', label: 'По левому краю' },
-  { value: 'center', label: 'По центру' },
+  { value: 'left', label: t('opt.left') },
+  { value: 'center', label: t('opt.center') },
 ];
 
 const BLOCK_TYPES = {
   hero: {
-    name: 'Обложка',
+    name: t('blocks.hero'),
     icon: '▤',
     defaults: () => ({
-      title: 'Заголовок',
-      subtitle: 'Короткое описание того, чем вы занимаетесь.',
-      buttonText: 'Подробнее',
+      title: t('c.heroTitle'),
+      subtitle: t('c.heroSubtitle'),
+      buttonText: t('c.buttonMore'),
       buttonLink: '#',
       bg: '#0f1220',
       color: '#ffffff',
     }),
     fields: [
-      { key: 'title', label: 'Заголовок', type: 'text' },
-      { key: 'subtitle', label: 'Подзаголовок', type: 'textarea' },
-      { key: 'buttonText', label: 'Текст кнопки', type: 'text' },
-      { key: 'buttonLink', label: 'Ссылка кнопки', type: 'text' },
-      { key: 'bg', label: 'Фон', type: 'color' },
-      { key: 'color', label: 'Цвет текста', type: 'color' },
+      { key: 'title', label: t('f.title'), type: 'text' },
+      { key: 'subtitle', label: t('f.subtitle'), type: 'textarea' },
+      { key: 'buttonText', label: t('f.buttonText'), type: 'text' },
+      { key: 'buttonLink', label: t('f.buttonLink'), type: 'text' },
+      { key: 'bg', label: t('f.bg'), type: 'color' },
+      { key: 'color', label: t('f.color'), type: 'color' },
     ],
     render: p => `<section class="b-hero" style="background:${esc(p.bg)};color:${esc(p.color)}">
   <h1>${esc(p.title)}</h1>
@@ -38,17 +38,17 @@ const BLOCK_TYPES = {
   },
 
   heading: {
-    name: 'Заголовок',
+    name: t('blocks.heading'),
     icon: 'H',
-    defaults: () => ({ text: 'Новый раздел', level: 'h2', align: 'left' }),
+    defaults: () => ({ text: t('c.headingDefault'), level: 'h2', align: 'left' }),
     fields: [
-      { key: 'text', label: 'Текст', type: 'text' },
-      { key: 'level', label: 'Уровень', type: 'select', options: [
+      { key: 'text', label: t('f.text'), type: 'text' },
+      { key: 'level', label: t('f.level'), type: 'select', options: [
         { value: 'h1', label: 'H1' },
         { value: 'h2', label: 'H2' },
         { value: 'h3', label: 'H3' },
       ] },
-      { key: 'align', label: 'Выравнивание', type: 'select', options: ALIGN },
+      { key: 'align', label: t('f.align'), type: 'select', options: ALIGN },
     ],
     render: p => `<div class="b-container" style="padding-top:56px">
   <${p.level || 'h2'} class="b-heading ${esc(p.level)}" style="text-align:${esc(p.align)}">${esc(p.text)}</${p.level || 'h2'}>
@@ -56,12 +56,12 @@ const BLOCK_TYPES = {
   },
 
   text: {
-    name: 'Текст',
+    name: t('blocks.text'),
     icon: '¶',
-    defaults: () => ({ content: 'Абзац текста. Опишите проект, услугу или идею.', align: 'left' }),
+    defaults: () => ({ content: t('c.textDefault'), align: 'left' }),
     fields: [
-      { key: 'content', label: 'Содержимое', type: 'textarea' },
-      { key: 'align', label: 'Выравнивание', type: 'select', options: ALIGN },
+      { key: 'content', label: t('f.content'), type: 'textarea' },
+      { key: 'align', label: t('f.align'), type: 'select', options: ALIGN },
     ],
     render: p => `<div class="b-container b-section" style="padding-top:24px">
   <div class="b-text" style="text-align:${esc(p.align)};max-width:720px;${p.align === 'center' ? 'margin:0 auto' : ''}">
@@ -71,25 +71,25 @@ const BLOCK_TYPES = {
   },
 
   cards: {
-    name: 'Карточки',
+    name: t('blocks.cards'),
     icon: '▦',
     defaults: () => ({
-      title: 'Направления',
+      title: t('c.cardsTitle'),
       items: [
-        { title: 'Айдентика', text: 'Логотип, фирменный стиль, гайдлайны.' },
-        { title: '3D-графика', text: 'Рендеры продуктов и визуализации.' },
-        { title: 'Иллюстрации', text: 'Концепт-арт и авторская графика.' },
+        { title: t('c.card1t'), text: t('c.card1d') },
+        { title: t('c.card2t'), text: t('c.card2d') },
+        { title: t('c.card3t'), text: t('c.card3d') },
       ],
     }),
     fields: [
-      { key: 'title', label: 'Заголовок секции', type: 'text' },
+      { key: 'title', label: t('f.sectionTitle'), type: 'text' },
       {
-        key: 'items', label: 'Карточки', type: 'items',
-        itemDefaults: () => ({ title: 'Новая карточка', text: 'Описание.' }),
-        itemLabel: item => item.title || 'Карточка',
+        key: 'items', label: t('f.cards'), type: 'items',
+        itemDefaults: () => ({ title: t('c.newCard'), text: t('c.cardDesc') }),
+        itemLabel: item => item.title || t('item.card'),
         itemFields: [
-          { key: 'title', label: 'Заголовок', type: 'text' },
-          { key: 'text', label: 'Описание', type: 'textarea' },
+          { key: 'title', label: t('f.title'), type: 'text' },
+          { key: 'text', label: t('f.description'), type: 'textarea' },
         ],
       },
     ],
@@ -102,25 +102,25 @@ const BLOCK_TYPES = {
   },
 
   gallery: {
-    name: 'Галерея',
+    name: t('blocks.gallery'),
     icon: '▣',
     defaults: () => ({
-      title: 'Работы',
+      title: t('c.galleryTitle'),
       items: [
-        { image: ph('Рендер'), caption: '3D-визуализация' },
-        { image: ph('Постер', '#e8e2f0'), caption: 'Постер' },
-        { image: ph('Логотип', '#e2efe8'), caption: 'Знак' },
+        { image: ph(t('ph.render')), caption: t('c.capRender') },
+        { image: ph(t('ph.poster'), '#e8e2f0'), caption: t('c.capPoster') },
+        { image: ph(t('ph.logo'), '#e2efe8'), caption: t('c.capMark') },
       ],
     }),
     fields: [
-      { key: 'title', label: 'Заголовок секции', type: 'text' },
+      { key: 'title', label: t('f.sectionTitle'), type: 'text' },
       {
-        key: 'items', label: 'Изображения', type: 'items',
-        itemDefaults: () => ({ image: ph('Изображение'), caption: '' }),
-        itemLabel: (item, i) => item.caption || `Изображение ${i + 1}`,
+        key: 'items', label: t('f.images'), type: 'items',
+        itemDefaults: () => ({ image: ph(t('ph.image')), caption: '' }),
+        itemLabel: (item, i) => item.caption || t('item.image', { n: i + 1 }),
         itemFields: [
-          { key: 'image', label: 'URL изображения', type: 'text' },
-          { key: 'caption', label: 'Подпись', type: 'text' },
+          { key: 'image', label: t('f.image'), type: 'text' },
+          { key: 'caption', label: t('f.caption'), type: 'text' },
         ],
       },
     ],
@@ -133,13 +133,13 @@ const BLOCK_TYPES = {
   },
 
   image: {
-    name: 'Изображение',
+    name: t('blocks.image'),
     icon: '🖼',
-    defaults: () => ({ src: ph('Изображение'), alt: '', caption: '' }),
+    defaults: () => ({ src: ph(t('ph.image')), alt: '', caption: '' }),
     fields: [
-      { key: 'src', label: 'URL изображения', type: 'text' },
-      { key: 'alt', label: 'Alt-текст', type: 'text' },
-      { key: 'caption', label: 'Подпись', type: 'text' },
+      { key: 'src', label: t('f.image'), type: 'text' },
+      { key: 'alt', label: t('f.alt'), type: 'text' },
+      { key: 'caption', label: t('f.caption'), type: 'text' },
     ],
     render: p => `<figure class="b-section b-image" style="padding-top:24px"><div class="b-container">
   <img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy">
@@ -148,25 +148,25 @@ const BLOCK_TYPES = {
   },
 
   faq: {
-    name: 'FAQ',
+    name: t('blocks.faq'),
     icon: '?',
     defaults: () => ({
-      title: 'Частые вопросы',
+      title: t('c.faqTitle'),
       items: [
-        { q: 'Как начинается работа?', a: 'С короткого созвона: обсуждаем задачу, сроки и бюджет.' },
-        { q: 'Сколько занимает проект?', a: 'Обычно от одной до четырёх недель в зависимости от объёма.' },
-        { q: 'Что входит в результат?', a: 'Исходники, экспорт в нужных форматах и краткий гайд по использованию.' },
+        { q: t('c.faq1q'), a: t('c.faq1a') },
+        { q: t('c.faq2q'), a: t('c.faq2a') },
+        { q: t('c.faq3q'), a: t('c.faq3a') },
       ],
     }),
     fields: [
-      { key: 'title', label: 'Заголовок секции', type: 'text' },
+      { key: 'title', label: t('f.sectionTitle'), type: 'text' },
       {
-        key: 'items', label: 'Вопросы', type: 'items',
-        itemDefaults: () => ({ q: 'Вопрос?', a: 'Ответ.' }),
-        itemLabel: item => item.q || 'Вопрос',
+        key: 'items', label: t('f.questions'), type: 'items',
+        itemDefaults: () => ({ q: t('c.question'), a: t('c.answer') }),
+        itemLabel: item => item.q || t('item.question'),
         itemFields: [
-          { key: 'q', label: 'Вопрос', type: 'text' },
-          { key: 'a', label: 'Ответ', type: 'textarea' },
+          { key: 'q', label: t('f.q'), type: 'text' },
+          { key: 'a', label: t('f.a'), type: 'textarea' },
         ],
       },
     ],
@@ -177,23 +177,23 @@ const BLOCK_TYPES = {
   },
 
   cta: {
-    name: 'Призыв к действию',
+    name: t('blocks.cta'),
     icon: '➤',
     defaults: () => ({
-      title: 'Обсудим ваш проект?',
-      text: 'Расскажите о задаче — предложу решение и оценю сроки.',
-      buttonText: 'Написать мне',
+      title: t('c.ctaTitle'),
+      text: t('c.ctaText'),
+      buttonText: t('c.ctaButton'),
       buttonLink: '#',
       bg: '#0f1220',
       color: '#ffffff',
     }),
     fields: [
-      { key: 'title', label: 'Заголовок', type: 'text' },
-      { key: 'text', label: 'Текст', type: 'textarea' },
-      { key: 'buttonText', label: 'Текст кнопки', type: 'text' },
-      { key: 'buttonLink', label: 'Ссылка кнопки', type: 'text' },
-      { key: 'bg', label: 'Фон', type: 'color' },
-      { key: 'color', label: 'Цвет текста', type: 'color' },
+      { key: 'title', label: t('f.title'), type: 'text' },
+      { key: 'text', label: t('f.text'), type: 'textarea' },
+      { key: 'buttonText', label: t('f.buttonText'), type: 'text' },
+      { key: 'buttonLink', label: t('f.buttonLink'), type: 'text' },
+      { key: 'bg', label: t('f.bg'), type: 'color' },
+      { key: 'color', label: t('f.color'), type: 'color' },
     ],
     render: p => `<section class="b-cta" style="background:${esc(p.bg)};color:${esc(p.color)}"><div class="b-container">
   <h2>${esc(p.title)}</h2>
@@ -203,23 +203,23 @@ const BLOCK_TYPES = {
   },
 
   spacer: {
-    name: 'Отступ',
+    name: t('blocks.spacer'),
     icon: '↕',
     defaults: () => ({ height: 80 }),
     fields: [
-      { key: 'height', label: 'Высота', type: 'range', min: 20, max: 300, step: 10, unit: 'px' },
+      { key: 'height', label: t('f.height'), type: 'range', min: 20, max: 300, step: 10, unit: 'px' },
     ],
     render: p => `<div class="b-spacer" style="height:${Math.max(0, Number(p.height) || 0)}px"></div>`,
   },
 
   footer: {
-    name: 'Футер',
+    name: t('blocks.footer'),
     icon: '▁',
-    defaults: () => ({ text: '© 2025 Моя студия', bg: '#0f1220', color: '#9aa1ad' }),
+    defaults: () => ({ text: t('c.footerText'), bg: '#0f1220', color: '#9aa1ad' }),
     fields: [
-      { key: 'text', label: 'Текст', type: 'text' },
-      { key: 'bg', label: 'Фон', type: 'color' },
-      { key: 'color', label: 'Цвет текста', type: 'color' },
+      { key: 'text', label: t('f.text'), type: 'text' },
+      { key: 'bg', label: t('f.bg'), type: 'color' },
+      { key: 'color', label: t('f.color'), type: 'color' },
     ],
     render: p => `<footer class="b-footer" style="background:${esc(p.bg)};color:${esc(p.color)}"><div class="b-container">${esc(p.text)}</div></footer>`,
   },
