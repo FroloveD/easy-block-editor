@@ -29,6 +29,9 @@ body {
 }
 .b-btn:hover { opacity: .88; }
 .b-btn-light { background: #fff; color: #111; }
+.b-btn-outline { background: transparent; border: 2px solid currentColor; color: inherit; }
+.b-btn-ghost { background: transparent; color: inherit; text-decoration: underline; }
+.b-btn-large { padding: 16px 38px; font-size: 17px; }
 
 .b-hero { padding: 120px 24px; text-align: center; }
 .b-hero h1 { font-size: clamp(36px, 6vw, 62px); letter-spacing: -0.02em; margin: 0 0 16px; }
