@@ -10,6 +10,22 @@ const ALIGN = [
   { value: 'center', label: t('opt.center') },
 ];
 
+const COLS_OPTS = () => [
+  { value: 'auto', label: t('opt.auto') },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+];
+
+const gridCss = p => {
+  const parts = [];
+  const n = parseInt(p.cols, 10);
+  if (n >= 1 && n <= 6) parts.push(`grid-template-columns:repeat(${n},1fr)`);
+  const g = parseInt(p.gap, 10);
+  if (g > 0) parts.push(`gap:${g}px`);
+  return parts.join(';');
+};
+
 const BLOCK_TYPES = {
   hero: {
     name: t('blocks.hero'),
@@ -98,6 +114,8 @@ const BLOCK_TYPES = {
     }),
     fields: [
       { key: 'title', label: t('f.sectionTitle'), type: 'text' },
+      { key: 'cols', label: t('f.cols'), type: 'select', options: COLS_OPTS() },
+      { key: 'gap', label: t('f.gap'), type: 'range', min: 8, max: 64, step: 4, unit: 'px' },
       {
         key: 'items', label: t('f.cards'), type: 'items',
         itemDefaults: () => ({ title: t('c.newCard'), text: t('c.cardDesc') }),
@@ -110,8 +128,8 @@ const BLOCK_TYPES = {
     ],
     render: p => `<section class="b-section"><div class="b-container">
   ${p.title ? `<h2 class="b-title">${esc(p.title)}</h2>` : ''}
-  <div class="b-cards-grid">
-    ${(p.items || []).map(it => `<div class="b-card"><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`).join('\n    ')}
+  <div class="b-cards-grid" style="${gridCss(p)}">
+    ${(p.items || []).map((it, i) => `<div class="b-card" data-item-idx="${i}"><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`).join('\n    ')}
   </div>
 </div></section>`,
   },
@@ -129,6 +147,8 @@ const BLOCK_TYPES = {
     }),
     fields: [
       { key: 'title', label: t('f.sectionTitle'), type: 'text' },
+      { key: 'cols', label: t('f.cols'), type: 'select', options: COLS_OPTS() },
+      { key: 'gap', label: t('f.gap'), type: 'range', min: 8, max: 64, step: 4, unit: 'px' },
       {
         key: 'items', label: t('f.images'), type: 'items',
         itemDefaults: () => ({ image: ph(t('ph.image')), caption: '' }),
@@ -141,8 +161,8 @@ const BLOCK_TYPES = {
     ],
     render: p => `<section class="b-section"><div class="b-container">
   ${p.title ? `<h2 class="b-title">${esc(p.title)}</h2>` : ''}
-  <div class="b-gallery-grid">
-    ${(p.items || []).map(it => `<figure class="b-fig"><img src="${esc(it.image)}" alt="${esc(it.caption)}" loading="lazy">${it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : ''}</figure>`).join('\n    ')}
+  <div class="b-gallery-grid" style="${gridCss(p)}">
+    ${(p.items || []).map((it, i) => `<figure class="b-fig" data-item-idx="${i}"><img src="${esc(it.image)}" alt="${esc(it.caption)}" loading="lazy">${it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : ''}</figure>`).join('\n    ')}
   </div>
 </div></section>`,
   },
@@ -190,7 +210,7 @@ const BLOCK_TYPES = {
     ],
     render: p => `<section class="b-section"><div class="b-container" style="max-width:760px">
   ${p.title ? `<h2 class="b-title">${esc(p.title)}</h2>` : ''}
-  ${(p.items || []).map(it => `<details class="b-details"><summary>${esc(it.q)}</summary><p>${esc(it.a)}</p></details>`).join('\n  ')}
+  ${(p.items || []).map((it, i) => `<details class="b-details" data-item-idx="${i}"><summary>${esc(it.q)}</summary><p>${esc(it.a)}</p></details>`).join('\n  ')}
 </div></section>`,
   },
 
@@ -244,6 +264,7 @@ const BLOCK_TYPES = {
         { value: '3', label: '3' },
         { value: '4', label: '4' },
       ] },
+      { key: 'gap', label: t('f.gap'), type: 'range', min: 8, max: 64, step: 4, unit: 'px' },
       {
         key: 'items', label: t('f.columnsItems'), type: 'items',
         itemDefaults: () => ({ title: t('c.newColTitle'), text: t('c.newColText') }),
@@ -256,8 +277,8 @@ const BLOCK_TYPES = {
     ],
     render: p => `<section class="b-section"><div class="b-container">
   ${p.title ? `<h2 class="b-title">${esc(p.title)}</h2>` : ''}
-  <div class="b-cols" style="grid-template-columns:repeat(${Math.min(4, Math.max(1, Number(p.count) || 3))},1fr)">
-    ${(p.items || []).map(it => `<div class="b-col"><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`).join('\n    ')}
+  <div class="b-cols" style="grid-template-columns:repeat(${Math.min(4, Math.max(1, Number(p.count) || 3))},1fr)${parseInt(p.gap, 10) > 0 ? `;gap:${parseInt(p.gap, 10)}px` : ''}">
+    ${(p.items || []).map((it, i) => `<div class="b-col" data-item-idx="${i}"><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`).join('\n    ')}
   </div>
 </div></section>`,
   },
