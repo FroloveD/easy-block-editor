@@ -12,6 +12,55 @@ let history = [];
 let future = [];
 let previewMode = false;
 let dragState = null;
+let newBlockType = null;
+let ghostEl = null;
+
+const PALETTES = {
+  dark: { bg: '#0f1220', fg: '#ffffff' },
+  light: { bg: '#f5f6fa', fg: '#16181d' },
+  indigo: { bg: '#4f46e5', fg: '#ffffff' },
+  teal: { bg: '#0d9488', fg: '#ffffff' },
+  amber: { bg: '#f59e0b', fg: '#16181d' },
+  rose: { bg: '#e11d48', fg: '#ffffff' },
+};
+
+const SHADOWS = {
+  sm: '0 1px 3px rgba(0,0,0,.14)',
+  md: '0 6px 16px rgba(0,0,0,.18)',
+  lg: '0 16px 40px rgba(0,0,0,.26)',
+  glow: '0 0 0 4px rgba(79,70,229,.35)',
+};
+
+const FILTERS = {
+  gray: 'grayscale(1)',
+  blur: 'blur(2px)',
+  sepia: 'sepia(.55)',
+  bright: 'brightness(1.12)',
+};
+
+const STYLE_ALIGNS = [
+  { value: '', label: t('opt.inherit') },
+  { value: 'left', label: t('opt.left') },
+  { value: 'center', label: t('opt.center') },
+  { value: 'right', label: t('opt.right') },
+  { value: 'justify', label: t('opt.justify') },
+];
+
+const SHADOW_OPTS = [
+  { value: '', label: t('opt.shadowNone') },
+  { value: 'sm', label: t('opt.shadowSm') },
+  { value: 'md', label: t('opt.shadowMd') },
+  { value: 'lg', label: t('opt.shadowLg') },
+  { value: 'glow', label: t('opt.shadowGlow') },
+];
+
+const FILTER_OPTS = [
+  { value: '', label: t('opt.fxNone') },
+  { value: 'gray', label: t('opt.fxGray') },
+  { value: 'blur', label: t('opt.fxBlur') },
+  { value: 'sepia', label: t('opt.fxSepia') },
+  { value: 'bright', label: t('opt.fxBright') },
+];
 
 function page() {
   return site.pages.find(p => p.id === site.currentPageId) || site.pages[0];
@@ -42,6 +91,7 @@ function mutate(fn, { record = true, inspector = false } = {}) {
   persist();
   renderCanvas();
   renderPagesSelect();
+  renderLayers();
   if (inspector) renderInspector();
 }
 
@@ -67,11 +117,64 @@ function updateHistoryButtons() {
   $('#btn-redo').disabled = !future.length;
 }
 
+let collapsedBlocks = new Set();
+let layersCollapsed = store.getItem('block-editor:layers-collapsed') === '1';
+
+function renderLayers() {
+  const box = $('#layers');
+  const p = page();
+  const rows = [`<div class="layer-root">${esc(p.title || t('sample.newPage'))}</div>`];
+  p.blocks.forEach(b => {
+    const bt = BLOCK_TYPES[b.type];
+    if (!bt) return;
+    const sel = b.id === selectedId && !previewMode ? ' selected' : '';
+    const f = (bt.fields || []).find(x => x.type === 'items');
+    const kids = f ? (b.props[f.key] || []).length : 0;
+    const fold = kids ? `<button class="layer-fold" data-fold="${b.id}" title="${t('title.fold')}">${collapsedBlocks.has(b.id) ? '▸' : '▾'}</button>` : '<span class="layer-fold-spacer"></span>';
+    rows.push(`<div class="layer-row${sel}" data-id="${b.id}">${fold}<span class="lib-icon">${bt.icon}</span><span class="layer-name">${bt.name}</span></div>`);
+    if (!f || collapsedBlocks.has(b.id)) return;
+    (b.props[f.key] || []).forEach((it, i) => {
+      const label = f.itemLabel ? f.itemLabel(it, i) : t('item.n', { n: i + 1 });
+      rows.push(`<div class="layer-row layer-child${sel}" data-id="${b.id}" data-fkey="${f.key}" data-idx="${i}">└ ${esc(label)}</div>`);
+    });
+  });
+  box.innerHTML = rows.join('');
+}
+
+function applyLayersCollapsed() {
+  $('#layers').hidden = layersCollapsed;
+  $('#btn-layers-toggle').textContent = layersCollapsed ? '+' : '−';
+}
+
 function renderAll() {
   renderCanvas();
   renderPagesSelect();
+  renderLayers();
   renderInspector();
   updateHistoryButtons();
+}
+
+function styleCss(s = {}) {
+  const css = [];
+  if (s.width) css.push(`width:${s.width}`);
+  if (s.height) css.push(`height:${s.height}`);
+  if (Number(s.radius) > 0) css.push(`border-radius:${Number(s.radius)}px;overflow:hidden`);
+  if (s.align) css.push(`text-align:${s.align}`);
+  if (s.font) css.push(`font-family:'${s.font}'`);
+  if (s.background) css.push(`background:${s.background}`);
+  if (s.color) css.push(`color:${s.color}`);
+  const op = Number(s.opacity);
+  if (Number.isFinite(op) && op < 100) css.push(`opacity:${Math.max(0, op) / 100}`);
+  if (s.shadow && SHADOWS[s.shadow]) css.push(`box-shadow:${SHADOWS[s.shadow]}`);
+  if (s.filter && FILTERS[s.filter]) css.push(`filter:${FILTERS[s.filter]}`);
+  return css.join(';');
+}
+
+function renderBlockHtml(b) {
+  const bt = BLOCK_TYPES[b.type];
+  if (!bt) return '';
+  const css = styleCss(b.style);
+  return css ? `<div class="b-style" style="${esc(css)}">${bt.render(b.props)}</div>` : bt.render(b.props);
 }
 
 function sanitizeRich(html) {
@@ -130,9 +233,69 @@ function renderCanvas() {
           <button data-act="del" title="${t('title.del')}">✕</button>
         </span>
       </div>
-      <div class="bw-body">${bt.render(b.props)}</div>`;
+      <div class="bw-body">${renderBlockHtml(b)}</div>`;
     canvas.appendChild(wrap);
   });
+}
+
+function ensureFonts(s) {
+  if (!Array.isArray(s.fonts)) s.fonts = [];
+  s.fonts = s.fonts.filter(f => f && (f.kind === 'google' || f.kind === 'local'));
+  if (typeof s.fontFamily !== 'string') s.fontFamily = '';
+}
+
+function googleFontsUrl(family) {
+  return 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(family).replace(/%20/g, '+') + ':wght@400;700&display=swap';
+}
+
+function fontFaceCss(f) {
+  return f.kind === 'local'
+    ? `@font-face{font-family:'${f.family}';src:url(${f.dataUrl}) format('${f.format}');font-display:swap;}`
+    : '';
+}
+
+function applyFontAssets() {
+  let style = $('#fonts-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'fonts-style';
+    document.head.appendChild(style);
+  }
+  style.textContent = site.fonts.map(fontFaceCss).join('\n');
+  document.querySelectorAll('link[data-font-link]').forEach(l => l.remove());
+  site.fonts.filter(f => f.kind === 'google').forEach(f => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = googleFontsUrl(f.family);
+    link.dataset.fontLink = '1';
+    document.head.appendChild(link);
+  });
+  $('#canvas').style.fontFamily = site.fontFamily || '';
+  renderFontsPanel();
+}
+
+function renderFontsPanel() {
+  const list = $('#fonts-list');
+  if (!site.fonts.length) {
+    list.innerHTML = `<p class="hint">${t('app.fontEmpty')}</p>`;
+  } else {
+    list.innerHTML = site.fonts.map((f, i) =>
+      `<div class="font-row"><span class="font-sample" style="font-family:'${esc(f.family)}'">Aa</span><span class="font-name">${esc(f.family)}${f.kind === 'local' ? ` <em>(${t('app.fontLocal')})</em>` : ''}</span><button data-dfont="${i}" title="${t('title.delFont')}">✕</button></div>`).join('');
+  }
+  const sel = $('#default-font-select');
+  sel.innerHTML = `<option value="">${t('app.fontInherit')}</option>` + site.fonts.map(f =>
+    `<option value="${esc(f.family)}" ${site.fontFamily === f.family ? 'selected' : ''}>${esc(f.family)}</option>`).join('');
+  sel.value = site.fontFamily || '';
+}
+
+function fontsHeadHtml() {
+  const links = site.fonts.filter(f => f.kind === 'google').map(f => `<link rel="stylesheet" href="${esc(googleFontsUrl(f.family))}">`).join('\n');
+  const faces = site.fonts.map(fontFaceCss).filter(Boolean).join('\n');
+  return (links ? links + '\n' : '') + (faces ? `<style>${faces}</style>` : '');
+}
+
+function bodyFontAttr() {
+  return site.fontFamily ? ` style="font-family:'${esc(site.fontFamily)}'"` : '';
 }
 
 function renderPagesSelect() {
@@ -153,8 +316,23 @@ function renderLibrary() {
   for (const [type, bt] of Object.entries(BLOCK_TYPES)) {
     const el = document.createElement('button');
     el.className = 'lib-item';
+    el.draggable = true;
+    el.dataset.type = type;
     el.innerHTML = `<span class="lib-icon">${bt.icon}</span><span>${bt.name}</span>`;
     el.addEventListener('click', () => addBlock(type));
+    el.addEventListener('dragstart', e => {
+      if (previewMode) return;
+      newBlockType = type;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', 'new:' + type);
+      }
+    });
+    el.addEventListener('dragend', () => {
+      newBlockType = null;
+      dragState = null;
+      clearGhost();
+    });
     box.appendChild(el);
   }
 }
@@ -245,7 +423,31 @@ function renderInspector() {
   }
   const bt = BLOCK_TYPES[b.type];
   const idBase = `p-${b.id}`;
-  box.innerHTML = `<h3>${bt.icon} ${bt.name}</h3>` + (bt.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('');
+  box.innerHTML = `<h3>${bt.icon} ${bt.name}</h3>` + (bt.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('') + styleSectionHtml(b);
+}
+
+function styleSectionHtml(b) {
+  const s = b.style || {};
+  const id = `s-${b.id}`;
+  const pal = Object.entries(PALETTES).map(([k, p]) =>
+    `<button type="button" class="pal-btn" data-pal="${k}" title="${esc(p.bg)}" style="background:${p.bg}"><span style="color:${p.fg}">Aa</span></button>`).join('');
+  const opts = (list, key) => list.map(o => `<option value="${esc(o.value)}" ${String(s[key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  const fonts = [{ value: '', label: t('app.fontInherit') }].concat(site.fonts.map(f => ({ value: f.family, label: f.family })));
+  return `<div class="style-sec">
+  <h4>${t('app.style')}</h4>
+  <div class="pal-row">${pal}</div>
+  <label class="fld"><span>${t('f.font')}</span><select data-skey="font">${opts(fonts, 'font')}</select></label>
+  <label class="fld"><span>${t('f.width')}</span><input type="text" value="${esc(s.width || '')}" data-skey="width" placeholder="auto / 100% / 600px"></label>
+  <label class="fld"><span>${t('f.height')}</span><input type="text" value="${esc(s.height || '')}" data-skey="height" placeholder="auto / 400px"></label>
+  <label class="fld"><span>${t('f.radius')} <b data-out="${id}-radius">${esc(s.radius || 0)}px</b></span><input id="${id}-radius" type="range" min="0" max="60" step="2" value="${esc(s.radius || 0)}" data-skey="radius"></label>
+  <label class="fld"><span>${t('f.align')}</span><select data-skey="align">${opts(STYLE_ALIGNS, 'align')}</select></label>
+  <label class="fld"><span>${t('f.bg')}</span><input type="color" value="${esc(s.background || '#ffffff')}" data-skey="background"></label>
+  <label class="fld"><span>${t('f.color')}</span><input type="color" value="${esc(s.color || '#16181d')}" data-skey="color"></label>
+  <label class="fld"><span>${t('f.opacity')} <b data-out="${id}-opacity">${esc(s.opacity ?? 100)}%</b></span><input id="${id}-opacity" type="range" min="0" max="100" step="5" value="${esc(s.opacity ?? 100)}" data-skey="opacity"></label>
+  <label class="fld"><span>${t('f.shadow')}</span><select data-skey="shadow">${opts(SHADOW_OPTS, 'shadow')}</select></label>
+  <label class="fld"><span>${t('f.effects')}</span><select data-skey="filter">${opts(FILTER_OPTS, 'filter')}</select></label>
+  <button class="btn-ghost" data-sact="reset">${t('app.resetStyle')}</button>
+</div>`;
 }
 
 $('#canvas').addEventListener('click', e => {
@@ -276,50 +478,138 @@ $('#canvas').addEventListener('click', e => {
   if (wrap) {
     selectedId = wrap.dataset.id;
     renderCanvas();
+    renderLayers();
     renderInspector();
   }
 });
 
+$('#layers').addEventListener('click', e => {
+  if (previewMode) return;
+  const fold = e.target.closest('.layer-fold');
+  if (fold) {
+    const id = fold.dataset.fold;
+    if (collapsedBlocks.has(id)) collapsedBlocks.delete(id);
+    else collapsedBlocks.add(id);
+    renderLayers();
+    return;
+  }
+  const row = e.target.closest('.layer-row');
+  if (!row || !row.dataset.id) return;
+  if (!page().blocks.some(b => b.id === row.dataset.id)) return;
+  selectedId = row.dataset.id;
+  renderCanvas();
+  renderLayers();
+  renderInspector();
+  if (row.dataset.fkey !== undefined) {
+    const card = $(`#inspector .item-card[data-fkey="${row.dataset.fkey}"][data-idx="${row.dataset.idx}"]`);
+    if (card) {
+      card.classList.add('active');
+      if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+});
+
+function clearGhost() {
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  $$('.bw.dragging').forEach(w => w.classList.remove('dragging'));
+}
+
+function makeGhostNew(type) {
+  const el = document.createElement('div');
+  el.className = 'bw ghost';
+  el.innerHTML = `<div class="bw-body">${renderBlockHtml({ id: '__ghost__', type, props: BLOCK_TYPES[type].defaults() })}</div>`;
+  return el;
+}
+
+function makeGhostMove(id) {
+  const src = $(`.bw[data-id="${id}"]`);
+  if (!src) return null;
+  const el = src.cloneNode(true);
+  el.classList.add('ghost');
+  el.classList.remove('selected', 'dragging', 'drop-before', 'drop-after');
+  return el;
+}
+
+function positionGhost(wrap, before) {
+  const key = `${dragState.kind}:${dragState.kind === 'new' ? dragState.type : dragState.id}|${dragState.targetId || ''}|${before ? 'b' : 'a'}`;
+  if (ghostEl && ghostEl.dataset.key === key) return;
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  ghostEl = dragState.kind === 'new' ? makeGhostNew(dragState.type) : makeGhostMove(dragState.id);
+  if (!ghostEl) return;
+  ghostEl.dataset.key = key;
+  if (wrap) {
+    wrap.parentNode.insertBefore(ghostEl, before ? wrap : wrap.nextSibling);
+  } else {
+    $('#canvas').appendChild(ghostEl);
+  }
+}
+
 $('#canvas').addEventListener('dragstart', e => {
   const wrap = e.target.closest('.bw');
   if (!wrap || previewMode) return;
-  dragState = { id: wrap.dataset.id, targetId: null, before: false };
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', wrap.dataset.id);
+  dragState = { kind: 'move', id: wrap.dataset.id, targetId: null, before: false };
+  wrap.classList.add('dragging');
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', wrap.dataset.id);
+  }
 });
 
 $('#canvas').addEventListener('dragover', e => {
-  if (!dragState) return;
+  if (!dragState && !newBlockType) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
+  if (e.dataTransfer) e.dataTransfer.dropEffect = newBlockType ? 'copy' : 'move';
+  if (!dragState) dragState = { kind: 'new', type: newBlockType, targetId: null, before: false };
   const wrap = e.target.closest('.bw');
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
-  if (!wrap || wrap.dataset.id === dragState.id) {
+  if (wrap && wrap.classList.contains('ghost')) return;
+  if (!wrap || (dragState.kind === 'move' && wrap.dataset.id === dragState.id)) {
     dragState.targetId = null;
+    if (dragState.kind === 'new') positionGhost(null, false);
+    else if (ghostEl) {
+      ghostEl.remove();
+      ghostEl = null;
+    }
     return;
   }
   const rect = wrap.getBoundingClientRect();
   const before = e.clientY < rect.top + rect.height / 2;
-  wrap.classList.add(before ? 'drop-before' : 'drop-after');
   dragState.targetId = wrap.dataset.id;
   dragState.before = before;
+  positionGhost(wrap, before);
 });
 
 $('#canvas').addEventListener('drop', e => {
   if (!dragState) return;
   e.preventDefault();
-  const { id, targetId, before } = dragState;
+  const ds = dragState;
   dragState = null;
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
+  newBlockType = null;
+  clearGhost();
   const blocks = page().blocks;
-  const from = blocks.findIndex(b => b.id === id);
-  if (from === -1) return;
+  if (ds.kind === 'move' && !ds.targetId) return;
   let to = blocks.length;
-  if (targetId) {
-    const ti = blocks.findIndex(b => b.id === targetId);
+  if (ds.targetId) {
+    const ti = blocks.findIndex(b => b.id === ds.targetId);
     if (ti === -1) return;
-    to = before ? ti : ti + 1;
+    to = ds.before ? ti : ti + 1;
   }
+  if (ds.kind === 'new') {
+    if (!BLOCK_TYPES[ds.type]) return;
+    const b = { id: uid(), type: ds.type, props: BLOCK_TYPES[ds.type].defaults() };
+    mutate(() => {
+      blocks.splice(to, 0, b);
+      selectedId = b.id;
+    }, { inspector: true });
+    return;
+  }
+  const from = blocks.findIndex(b => b.id === ds.id);
+  if (from === -1) return;
   if (from < to) to -= 1;
   if (from === to) return;
   mutate(() => {
@@ -330,7 +620,49 @@ $('#canvas').addEventListener('drop', e => {
 
 $('#canvas').addEventListener('dragend', () => {
   dragState = null;
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
+  newBlockType = null;
+  clearGhost();
+  renderCanvas();
+});
+
+$('#canvas').addEventListener('dblclick', e => {
+  if (previewMode) return;
+  const wrap = e.target.closest('.bw');
+  if (!wrap) return;
+  const b = page().blocks.find(x => x.id === wrap.dataset.id);
+  if (!b) return;
+  const cfg = (BLOCK_TYPES[b.type].inlineEdit || []).find(c => e.target.closest(c.sel));
+  if (!cfg) return;
+  e.preventDefault();
+  selectedId = b.id;
+  renderCanvas();
+  renderLayers();
+  renderInspector();
+  requestAnimationFrame(() => {
+    const wrap2 = $(`.bw[data-id="${b.id}"]`);
+    const el = wrap2 && wrap2.querySelector(cfg.sel);
+    if (!el) return;
+    el.contentEditable = 'true';
+    el.classList.add('inline-edit');
+    el.focus();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      el.contentEditable = 'false';
+      el.classList.remove('inline-edit');
+      const val = cfg.rich ? sanitizeRich(el.innerHTML) : el.textContent.trim();
+      if (val !== b.props[cfg.prop]) mutate(() => { b.props[cfg.prop] = val; }, { inspector: true });
+      el.removeEventListener('blur', finish);
+    };
+    el.addEventListener('blur', finish);
+    el.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape' || (ev.key === 'Enter' && !cfg.rich)) {
+        ev.preventDefault();
+        el.blur();
+      }
+    });
+  });
 });
 
 $('#inspector').addEventListener('focusin', e => {
@@ -375,6 +707,21 @@ $('#inspector').addEventListener('input', e => {
     renderCanvas();
     const out = $(`[data-out="${e.target.id}"]`);
     if (out) out.textContent = e.target.value + 'px';
+    return;
+  }
+  const skey = e.target.dataset.skey;
+  if (skey) {
+    b.style = b.style || {};
+    const val = e.target.value;
+    if (val === '' || (skey === 'radius' && Number(val) === 0) || (skey === 'opacity' && Number(val) === 100)) {
+      delete b.style[skey];
+    } else {
+      b.style[skey] = val;
+    }
+    persist();
+    renderCanvas();
+    const out = $(`[data-out="${e.target.id}"]`);
+    if (out) out.textContent = val + (skey === 'radius' ? 'px' : '%');
   }
 });
 
@@ -383,6 +730,23 @@ $('#inspector').addEventListener('click', e => {
   if (!btn) return;
   const b = current();
   if (!b) return;
+  const pal = btn.dataset.pal;
+  if (pal && PALETTES[pal]) {
+    const p = PALETTES[pal];
+    mutate(() => {
+      if ((BLOCK_TYPES[b.type].fields || []).some(f => f.key === 'bg')) {
+        b.props.bg = p.bg;
+        b.props.color = p.fg;
+      } else {
+        b.style = { ...(b.style || {}), background: p.bg, color: p.fg };
+      }
+    }, { inspector: true });
+    return;
+  }
+  if (btn.dataset.sact === 'reset') {
+    mutate(() => { b.style = {}; }, { inspector: true });
+    return;
+  }
   const iact = btn.dataset.iact;
   if (!iact) return;
   if (iact === 'add') {
@@ -450,6 +814,73 @@ $('#page-title-input').addEventListener('input', e => {
 $('#btn-undo').addEventListener('click', undo);
 $('#btn-redo').addEventListener('click', redo);
 
+$('#btn-add-font').addEventListener('click', () => {
+  const input = $('#font-name-input');
+  const family = input.value.trim().replace(/['"\\]/g, '');
+  if (!family) {
+    alert(t('alert.fontName'));
+    return;
+  }
+  if (site.fonts.some(f => f.family.toLowerCase() === family.toLowerCase())) {
+    input.value = '';
+    return;
+  }
+  mutate(() => { site.fonts.push({ kind: 'google', family }); });
+  input.value = '';
+  applyFontAssets();
+});
+
+$('#btn-upload-font').addEventListener('click', () => $('#file-font').click());
+
+$('#file-font').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const formats = { ttf: 'truetype', otf: 'opentype', woff: 'woff', woff2: 'woff2' };
+  if (!formats[ext]) {
+    alert(t('alert.importError'));
+    return;
+  }
+  const family = file.name.replace(/\.[^.]+$/, '').replace(/['"\\]/g, '') || 'CustomFont';
+  const reader = new FileReader();
+  reader.onload = () => {
+    mutate(() => { site.fonts.push({ kind: 'local', family, dataUrl: String(reader.result), format: formats[ext] }); });
+    applyFontAssets();
+  };
+  reader.readAsDataURL(file);
+});
+
+$('#fonts-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-dfont]');
+  if (!btn) return;
+  const i = +btn.dataset.dfont;
+  const rm = site.fonts[i];
+  if (!rm) return;
+  mutate(() => {
+    site.fonts.splice(i, 1);
+    if (site.fontFamily === rm.family) site.fontFamily = '';
+    site.pages.forEach(p => p.blocks.forEach(b => {
+      if (b.style && b.style.font === rm.family) delete b.style.font;
+    }));
+  }, { inspector: true });
+  applyFontAssets();
+});
+
+$('#default-font-select').addEventListener('change', e => {
+  snapshot();
+  site.fontFamily = e.target.value;
+  persist();
+  $('#canvas').style.fontFamily = site.fontFamily || '';
+  renderFontsPanel();
+});
+
+$('#btn-layers-toggle').addEventListener('click', () => {
+  layersCollapsed = !layersCollapsed;
+  store.setItem('block-editor:layers-collapsed', layersCollapsed ? '1' : '0');
+  applyLayersCollapsed();
+});
+
 $('#btn-preview').addEventListener('click', () => {
   previewMode = !previewMode;
   document.body.classList.toggle('preview', previewMode);
@@ -474,9 +905,7 @@ function download(name, text, mime) {
 
 function buildHtml() {
   const p = page();
-  const blocks = p.blocks
-    .map(b => BLOCK_TYPES[b.type] ? BLOCK_TYPES[b.type].render(b.props) : '')
-    .join('\n');
+  const blocks = p.blocks.map(renderBlockHtml).join('\n');
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -484,8 +913,9 @@ function buildHtml() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(p.title)}</title>
 <style>${SITE_CSS}</style>
+${fontsHeadHtml()}
 </head>
-<body>
+<body${bodyFontAttr()}>
 ${blocks}
 </body>
 </html>`;
@@ -493,7 +923,7 @@ ${blocks}
 
 function buildSiteHtml() {
   const nav = `<nav class="b-site-nav">${site.pages.map(p => `<a href="#/${p.id}" data-page-link="${esc(p.id)}">${esc(p.title)}</a>`).join('')}</nav>`;
-  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(b => BLOCK_TYPES[b.type] ? BLOCK_TYPES[b.type].render(b.props) : '').join('\n')}\n</div>`).join('\n');
+  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(renderBlockHtml).join('\n')}\n</div>`).join('\n');
   const router = `
 <script>
 (function () {
@@ -517,8 +947,9 @@ function buildSiteHtml() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(site.pages[0].title)}</title>
 <style>${SITE_CSS}</style>
+${fontsHeadHtml()}
 </head>
-<body>
+<body${bodyFontAttr()}>
 ${nav}
 ${pages}
 ${router}
@@ -548,10 +979,12 @@ function importData(raw) {
   }
   snapshot();
   sanitizeSite(next);
+  ensureFonts(next);
   site = next;
   selectedId = null;
   persist();
   renderAll();
+  applyFontAssets();
 }
 
 $('#file-json').addEventListener('change', e => {
@@ -629,15 +1062,18 @@ function loadSite() {
   if (saved && Array.isArray(saved.pages) && saved.pages.length && saved.pages.every(p => p && Array.isArray(p.blocks))) {
     site = saved;
     if (!site.pages.some(p => p.id === site.currentPageId)) site.currentPageId = site.pages[0].id;
+    ensureFonts(site);
     return;
   }
   const legacy = tryParse(localStorage.getItem(LEGACY_KEY));
   if (legacy && Array.isArray(legacy.blocks)) {
     const p = { id: uid(), title: legacy.title || t('sample.title'), blocks: legacy.blocks };
     site = { pages: [p], currentPageId: p.id };
+    ensureFonts(site);
     return;
   }
   site = sampleSite();
+  ensureFonts(site);
 }
 
 function init() {
@@ -650,6 +1086,8 @@ function init() {
 
   renderLibrary();
   renderAll();
+  applyFontAssets();
+  applyLayersCollapsed();
 }
 
 init();
