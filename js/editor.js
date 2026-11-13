@@ -54,6 +54,15 @@ const SHADOW_OPTS = [
   { value: 'glow', label: t('opt.shadowGlow') },
 ];
 
+const RATIO_OPTS = () => [
+  { value: '', label: t('opt.auto') },
+  { value: '1', label: '1:1' },
+  { value: '4/3', label: '4:3' },
+  { value: '3/4', label: '3:4' },
+  { value: '16/9', label: '16:9' },
+  { value: '9/16', label: '9:16' },
+];
+
 const FILTER_OPTS = [
   { value: '', label: t('opt.fxNone') },
   { value: 'gray', label: t('opt.fxGray') },
@@ -158,6 +167,7 @@ function styleCss(s = {}) {
   const css = [];
   if (s.width) css.push(`width:${s.width}`);
   if (s.height) css.push(`height:${s.height}`);
+  if (s.ratio) css.push(`--b-ratio:${s.ratio}`);
   if (Number(s.radius) > 0) css.push(`border-radius:${Number(s.radius)}px;overflow:hidden`);
   const pt = Number(s.paddingTop);
   if (Number.isFinite(pt) && pt > 0) css.push(`padding-top:${pt}px`);
@@ -240,6 +250,7 @@ function renderCanvas() {
       <div class="bw-body">${renderBlockHtml(b)}</div>`;
     canvas.appendChild(wrap);
   });
+  syncItemDraggable();
 }
 
 const FORMATS = {
@@ -523,6 +534,7 @@ function styleSectionHtml(b) {
   <label class="fld"><span>${t('f.font')}</span><select data-skey="font">${opts(fonts, 'font')}</select></label>
   <label class="fld"><span>${t('f.width')}</span><input type="text" value="${esc(s.width || '')}" data-skey="width" placeholder="auto / 100% / 600px"></label>
   <label class="fld"><span>${t('f.height')}</span><input type="text" value="${esc(s.height || '')}" data-skey="height" placeholder="auto / 400px"></label>
+  <label class="fld"><span>${t('f.ratio')}</span><select data-skey="ratio">${opts(RATIO_OPTS(), 'ratio')}</select></label>
   <label class="fld"><span>${t('f.radius')} <b data-out="${id}-radius">${esc(s.radius || 0)}px</b></span><input id="${id}-radius" type="range" min="0" max="60" step="2" value="${esc(s.radius || 0)}" data-skey="radius"></label>
   <label class="fld"><span>${t('f.paddingTop')} <b data-out="${id}-pt">${esc(s.paddingTop || 0)}px</b></span><input id="${id}-pt" type="range" min="0" max="160" step="8" value="${esc(s.paddingTop || 0)}" data-skey="paddingTop"></label>
   <label class="fld"><span>${t('f.paddingBottom')} <b data-out="${id}-pb">${esc(s.paddingBottom || 0)}px</b></span><input id="${id}-pb" type="range" min="0" max="160" step="8" value="${esc(s.paddingBottom || 0)}" data-skey="paddingBottom"></label>
@@ -566,6 +578,7 @@ $('#canvas').addEventListener('click', e => {
     selectedId = wrap.dataset.id;
     $$('.bw.selected').forEach(w => w.classList.remove('selected'));
     wrap.classList.add('selected');
+    syncItemDraggable();
     renderLayers();
     renderInspector();
   }
@@ -603,6 +616,14 @@ function clearGhost() {
     ghostEl = null;
   }
   $$('.bw.dragging').forEach(w => w.classList.remove('dragging'));
+  $$('.item-dragging').forEach(el => el.classList.remove('item-dragging'));
+}
+
+function syncItemDraggable() {
+  $$('#canvas [data-item-idx]').forEach(el => {
+    const wrap = el.closest('.bw');
+    el.draggable = !previewMode && !!wrap && wrap.dataset.id === selectedId;
+  });
 }
 
 function makeGhostNew(type) {
@@ -619,6 +640,35 @@ function makeGhostMove(id) {
   el.classList.add('ghost');
   el.classList.remove('selected', 'dragging', 'drop-before', 'drop-after');
   return el;
+}
+
+function makeGhostItem() {
+  const src = $(`.bw[data-id="${dragState.blockId}"] [data-item-idx="${dragState.idx}"]`);
+  if (!src) return null;
+  const el = src.cloneNode(true);
+  el.classList.add('item-ghost');
+  el.classList.remove('item-dragging');
+  el.draggable = false;
+  return el;
+}
+
+function positionItemGhost(itemEl, before) {
+  const kindKey = `item:${dragState.blockId}`;
+  if (ghostEl && ghostEl.dataset.kind !== kindKey) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  if (!ghostEl) {
+    ghostEl = makeGhostItem();
+    if (!ghostEl) return;
+    ghostEl.dataset.kind = kindKey;
+  }
+  const key = `${kindKey}|${dragState.targetIdx}|${before ? 'b' : 'a'}`;
+  if (ghostEl.dataset.key === key) return;
+  ghostEl.dataset.key = key;
+  const ref = before ? itemEl : itemEl.nextSibling;
+  if (ref === ghostEl || ghostEl.nextElementSibling === itemEl && before || ghostEl.previousElementSibling === itemEl && !before) return;
+  itemEl.parentNode.insertBefore(ghostEl, ref);
 }
 
 function positionGhost(wrap, before) {
@@ -646,8 +696,23 @@ function positionGhost(wrap, before) {
 }
 
 $('#canvas').addEventListener('dragstart', e => {
+  if (previewMode) return;
+  const itemEl = e.target.closest('[data-item-idx]');
+  if (itemEl && !itemEl.classList.contains('item-ghost')) {
+    const wrap = itemEl.closest('.bw');
+    const b = wrap && page().blocks.find(x => x.id === wrap.dataset.id);
+    if (b && Array.isArray(b.props.items)) {
+      dragState = { kind: 'item', blockId: b.id, fkey: 'items', idx: +itemEl.dataset.itemIdx, targetIdx: null, before: false };
+      itemEl.classList.add('item-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', 'item:' + b.id);
+      }
+      return;
+    }
+  }
   const wrap = e.target.closest('.bw');
-  if (!wrap || previewMode) return;
+  if (!wrap) return;
   dragState = { kind: 'move', id: wrap.dataset.id, targetId: null, before: false };
   wrap.classList.add('dragging');
   if (e.dataTransfer) {
@@ -661,6 +726,31 @@ $('#canvas').addEventListener('dragover', e => {
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = newBlockType ? 'copy' : 'move';
   if (!dragState) dragState = { kind: 'new', type: newBlockType, targetId: null, before: false };
+  if (dragState.kind === 'item') {
+    const itemEl = e.target.closest('[data-item-idx]');
+    if (!itemEl || itemEl.classList.contains('item-ghost') || itemEl.closest('.bw')?.dataset.id !== dragState.blockId) return;
+    if (itemEl.dataset.itemIdx === String(dragState.idx)) {
+      dragState.targetIdx = dragState.idx;
+      dragState.before = true;
+      positionItemGhost(itemEl, true);
+      return;
+    }
+    const horiz = itemEl.parentElement.classList.contains('b-cards-grid')
+      || itemEl.parentElement.classList.contains('b-gallery-grid')
+      || itemEl.parentElement.classList.contains('b-cols');
+    const rect = itemEl.getBoundingClientRect();
+    const frac = (horiz ? rect.width : rect.height)
+      ? (horiz ? e.clientX - rect.left : e.clientY - rect.top) / (horiz ? rect.width : rect.height)
+      : 1;
+    let before;
+    if (ghostEl && ghostEl.nextElementSibling === itemEl) before = frac < 0.6;
+    else if (ghostEl && ghostEl.previousElementSibling === itemEl) before = frac < 0.4;
+    else before = frac < 0.5;
+    dragState.targetIdx = +itemEl.dataset.itemIdx;
+    dragState.before = before;
+    positionItemGhost(itemEl, before);
+    return;
+  }
   const wrap = e.target.closest('.bw');
   if (wrap && wrap.classList.contains('ghost')) return;
   if (!wrap) {
@@ -692,6 +782,20 @@ $('#canvas').addEventListener('drop', e => {
   newBlockType = null;
   clearGhost();
   const blocks = page().blocks;
+  if (ds.kind === 'item') {
+    if (ds.targetIdx == null || ds.targetIdx === ds.idx) return;
+    const b = blocks.find(x => x.id === ds.blockId);
+    const arr = b && b.props[ds.fkey];
+    if (!Array.isArray(arr)) return;
+    let to = ds.before ? ds.targetIdx : ds.targetIdx + 1;
+    if (ds.idx < to) to -= 1;
+    if (ds.idx === to) return;
+    mutate(() => {
+      const [it] = arr.splice(ds.idx, 1);
+      arr.splice(to, 0, it);
+    });
+    return;
+  }
   if (ds.kind === 'move' && !ds.targetId) return;
   let to = blocks.length;
   if (ds.targetId) {
