@@ -159,6 +159,10 @@ function styleCss(s = {}) {
   if (s.width) css.push(`width:${s.width}`);
   if (s.height) css.push(`height:${s.height}`);
   if (Number(s.radius) > 0) css.push(`border-radius:${Number(s.radius)}px;overflow:hidden`);
+  const pt = Number(s.paddingTop);
+  if (Number.isFinite(pt) && pt > 0) css.push(`padding-top:${pt}px`);
+  const pb = Number(s.paddingBottom);
+  if (Number.isFinite(pb) && pb > 0) css.push(`padding-bottom:${pb}px`);
   if (s.align) css.push(`text-align:${s.align}`);
   if (s.font) css.push(`font-family:'${s.font}'`);
   if (s.background) css.push(`background:${s.background}`);
@@ -440,6 +444,8 @@ function styleSectionHtml(b) {
   <label class="fld"><span>${t('f.width')}</span><input type="text" value="${esc(s.width || '')}" data-skey="width" placeholder="auto / 100% / 600px"></label>
   <label class="fld"><span>${t('f.height')}</span><input type="text" value="${esc(s.height || '')}" data-skey="height" placeholder="auto / 400px"></label>
   <label class="fld"><span>${t('f.radius')} <b data-out="${id}-radius">${esc(s.radius || 0)}px</b></span><input id="${id}-radius" type="range" min="0" max="60" step="2" value="${esc(s.radius || 0)}" data-skey="radius"></label>
+  <label class="fld"><span>${t('f.paddingTop')} <b data-out="${id}-pt">${esc(s.paddingTop || 0)}px</b></span><input id="${id}-pt" type="range" min="0" max="160" step="8" value="${esc(s.paddingTop || 0)}" data-skey="paddingTop"></label>
+  <label class="fld"><span>${t('f.paddingBottom')} <b data-out="${id}-pb">${esc(s.paddingBottom || 0)}px</b></span><input id="${id}-pb" type="range" min="0" max="160" step="8" value="${esc(s.paddingBottom || 0)}" data-skey="paddingBottom"></label>
   <label class="fld"><span>${t('f.align')}</span><select data-skey="align">${opts(STYLE_ALIGNS, 'align')}</select></label>
   <label class="fld"><span>${t('f.bg')}</span><input type="color" value="${esc(s.background || '#ffffff')}" data-skey="background"></label>
   <label class="fld"><span>${t('f.color')}</span><input type="color" value="${esc(s.color || '#16181d')}" data-skey="color"></label>
@@ -727,7 +733,7 @@ $('#inspector').addEventListener('input', e => {
   if (skey) {
     b.style = b.style || {};
     const val = e.target.value;
-    if (val === '' || (skey === 'radius' && Number(val) === 0) || (skey === 'opacity' && Number(val) === 100)) {
+    if (val === '' || (skey === 'radius' && Number(val) === 0) || (skey === 'opacity' && Number(val) === 100) || ((skey === 'paddingTop' || skey === 'paddingBottom') && Number(val) === 0)) {
       delete b.style[skey];
     } else {
       b.style[skey] = val;

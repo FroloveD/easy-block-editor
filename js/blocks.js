@@ -225,6 +225,43 @@ const BLOCK_TYPES = {
 </div></section>`,
   },
 
+  columns: {
+    name: t('blocks.columns'),
+    icon: '⧓',
+    defaults: () => ({
+      title: '',
+      count: '3',
+      items: [
+        { title: t('c.col1t'), text: t('c.col1d') },
+        { title: t('c.col2t'), text: t('c.col2d') },
+        { title: t('c.col3t'), text: t('c.col3d') },
+      ],
+    }),
+    fields: [
+      { key: 'title', label: t('f.sectionTitle'), type: 'text' },
+      { key: 'count', label: t('f.columns'), type: 'select', options: [
+        { value: '2', label: '2' },
+        { value: '3', label: '3' },
+        { value: '4', label: '4' },
+      ] },
+      {
+        key: 'items', label: t('f.columnsItems'), type: 'items',
+        itemDefaults: () => ({ title: t('c.newColTitle'), text: t('c.newColText') }),
+        itemLabel: item => item.title || t('item.column'),
+        itemFields: [
+          { key: 'title', label: t('f.title'), type: 'text' },
+          { key: 'text', label: t('f.description'), type: 'textarea' },
+        ],
+      },
+    ],
+    render: p => `<section class="b-section"><div class="b-container">
+  ${p.title ? `<h2 class="b-title">${esc(p.title)}</h2>` : ''}
+  <div class="b-cols" style="grid-template-columns:repeat(${Math.min(4, Math.max(1, Number(p.count) || 3))},1fr)">
+    ${(p.items || []).map(it => `<div class="b-col"><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p></div>`).join('\n    ')}
+  </div>
+</div></section>`,
+  },
+
   spacer: {
     name: t('blocks.spacer'),
     icon: '↕',
