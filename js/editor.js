@@ -452,6 +452,7 @@ function styleSectionHtml(b) {
 
 $('#canvas').addEventListener('click', e => {
   if (previewMode) return;
+  if (e.target.closest('.inline-edit')) return;
   const btn = e.target.closest('.bw-actions button');
   const wrap = e.target.closest('.bw');
   const blocks = page().blocks;
@@ -534,19 +535,26 @@ function makeGhostMove(id) {
 }
 
 function positionGhost(wrap, before) {
-  const key = `${dragState.kind}:${dragState.kind === 'new' ? dragState.type : dragState.id}|${dragState.targetId || ''}|${before ? 'b' : 'a'}`;
-  if (ghostEl && ghostEl.dataset.key === key) return;
-  if (ghostEl) {
+  const kindKey = `${dragState.kind}:${dragState.kind === 'new' ? dragState.type : dragState.id}`;
+  if (ghostEl && ghostEl.dataset.kind !== kindKey) {
     ghostEl.remove();
     ghostEl = null;
   }
-  ghostEl = dragState.kind === 'new' ? makeGhostNew(dragState.type) : makeGhostMove(dragState.id);
-  if (!ghostEl) return;
+  if (!ghostEl) {
+    ghostEl = dragState.kind === 'new' ? makeGhostNew(dragState.type) : makeGhostMove(dragState.id);
+    if (!ghostEl) return;
+    ghostEl.dataset.kind = kindKey;
+  }
+  const key = `${kindKey}|${dragState.targetId || ''}|${before ? 'b' : 'a'}`;
+  if (ghostEl.dataset.key === key) return;
   ghostEl.dataset.key = key;
+  const canvas = $('#canvas');
   if (wrap) {
-    wrap.parentNode.insertBefore(ghostEl, before ? wrap : wrap.nextSibling);
-  } else {
-    $('#canvas').appendChild(ghostEl);
+    const ref = before ? wrap : wrap.nextSibling;
+    if (ref === ghostEl || ghostEl.nextElementSibling === wrap && before || ghostEl.previousElementSibling === wrap && !before) return;
+    wrap.parentNode.insertBefore(ghostEl, ref);
+  } else if (ghostEl.parentNode !== canvas || canvas.lastElementChild !== ghostEl) {
+    canvas.appendChild(ghostEl);
   }
 }
 
@@ -578,7 +586,11 @@ $('#canvas').addEventListener('dragover', e => {
     return;
   }
   const rect = wrap.getBoundingClientRect();
-  const before = e.clientY < rect.top + rect.height / 2;
+  const frac = rect.height ? (e.clientY - rect.top) / rect.height : 1;
+  let before;
+  if (ghostEl && ghostEl.nextElementSibling === wrap) before = frac < 0.6;
+  else if (ghostEl && ghostEl.previousElementSibling === wrap) before = frac < 0.4;
+  else before = frac < 0.5;
   dragState.targetId = wrap.dataset.id;
   dragState.before = before;
   positionGhost(wrap, before);
@@ -642,6 +654,7 @@ $('#canvas').addEventListener('dblclick', e => {
     const wrap2 = $(`.bw[data-id="${b.id}"]`);
     const el = wrap2 && wrap2.querySelector(cfg.sel);
     if (!el) return;
+    wrap2.draggable = false;
     el.contentEditable = 'true';
     el.classList.add('inline-edit');
     el.focus();
@@ -651,6 +664,8 @@ $('#canvas').addEventListener('dblclick', e => {
       done = true;
       el.contentEditable = 'false';
       el.classList.remove('inline-edit');
+      const wrapNow = el.closest('.bw');
+      if (wrapNow) wrapNow.draggable = !previewMode;
       const val = cfg.rich ? sanitizeRich(el.innerHTML) : el.textContent.trim();
       if (val !== b.props[cfg.prop]) mutate(() => { b.props[cfg.prop] = val; }, { inspector: true });
       el.removeEventListener('blur', finish);

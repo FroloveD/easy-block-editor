@@ -290,6 +290,8 @@ body {
   outline-offset: 2px;
   cursor: text;
   min-height: 1em;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 #fonts-panel {
