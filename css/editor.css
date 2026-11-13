@@ -230,6 +230,8 @@ body {
 .bw.dragging .bw-body { display: none; }
 .bw.dragging { min-height: 8px; background: var(--accent-soft); border-radius: 8px; }
 
+.bw.dragging:has(+ .bw.ghost) { display: none; }
+
 .bw.ghost {
   opacity: .55;
   pointer-events: none;
