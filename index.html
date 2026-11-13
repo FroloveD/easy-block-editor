@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Редактор</title>
+  <link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-group">
+      <span class="logo">Blocks</span>
+      <input id="page-title-input" class="page-title" type="text" placeholder="Название страницы">
+    </div>
+    <div class="topbar-group">
+      <button class="device-btn active" data-device="desktop" title="Desktop">🖥</button>
+      <button class="device-btn" data-device="mobile" title="Mobile">📱</button>
+      <button id="btn-preview" class="btn">Превью</button>
+    </div>
+    <div class="topbar-group">
+      <button id="btn-undo" class="btn btn-icon" title="Отменить (Ctrl+Z)">↶</button>
+      <button id="btn-redo" class="btn btn-icon" title="Вернуть (Ctrl+Shift+Z)">↷</button>
+      <button id="btn-export" class="btn btn-primary">Экспорт HTML</button>
+      <button id="btn-json" class="btn">JSON ↓</button>
+      <button id="btn-import" class="btn">JSON ↑</button>
+      <input type="file" id="file-json" accept=".json,application/json" hidden>
+      <button id="btn-clear" class="btn btn-danger">Очистить</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel left">
+      <h2>Блоки</h2>
+      <p class="panel-hint">Клик добавляет блок после выбранного.</p>
+      <div id="library"></div>
+    </aside>
+
+    <section class="canvas-area">
+      <div id="canvas-frame" class="canvas-frame device-desktop">
+        <div id="canvas"></div>
+      </div>
+    </section>
+
+    <aside class="panel right">
+      <h2>Свойства</h2>
+      <div id="inspector"></div>
+    </aside>
+  </main>
+
+  <script src="js/site-css.js"></script>
+  <script src="js/blocks.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
