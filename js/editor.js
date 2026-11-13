@@ -476,9 +476,10 @@ $('#canvas').addEventListener('click', e => {
     }
     return;
   }
-  if (wrap) {
+  if (wrap && selectedId !== wrap.dataset.id) {
     selectedId = wrap.dataset.id;
-    renderCanvas();
+    $$('.bw.selected').forEach(w => w.classList.remove('selected'));
+    wrap.classList.add('selected');
     renderLayers();
     renderInspector();
   }
@@ -648,36 +649,33 @@ $('#canvas').addEventListener('dblclick', e => {
   if (!cfg) return;
   e.preventDefault();
   selectedId = b.id;
-  renderCanvas();
+  $$('.bw.selected').forEach(w => w.classList.remove('selected'));
+  wrap.classList.add('selected');
   renderLayers();
   renderInspector();
-  requestAnimationFrame(() => {
-    const wrap2 = $(`.bw[data-id="${b.id}"]`);
-    const el = wrap2 && wrap2.querySelector(cfg.sel);
-    if (!el) return;
-    wrap2.draggable = false;
-    el.contentEditable = 'true';
-    el.classList.add('inline-edit');
-    el.focus();
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      el.contentEditable = 'false';
-      el.classList.remove('inline-edit');
-      const wrapNow = el.closest('.bw');
-      if (wrapNow) wrapNow.draggable = !previewMode;
-      const val = cfg.rich ? sanitizeRich(el.innerHTML) : el.textContent.trim();
-      if (val !== b.props[cfg.prop]) mutate(() => { b.props[cfg.prop] = val; }, { inspector: true });
-      el.removeEventListener('blur', finish);
-    };
-    el.addEventListener('blur', finish);
-    el.addEventListener('keydown', ev => {
-      if (ev.key === 'Escape' || (ev.key === 'Enter' && !cfg.rich)) {
-        ev.preventDefault();
-        el.blur();
-      }
-    });
+  const el = e.target.closest(cfg.sel);
+  wrap.draggable = false;
+  el.contentEditable = 'true';
+  el.classList.add('inline-edit');
+  el.focus();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    el.contentEditable = 'false';
+    el.classList.remove('inline-edit');
+    const wrapNow = el.closest('.bw');
+    if (wrapNow) wrapNow.draggable = !previewMode;
+    const val = cfg.rich ? sanitizeRich(el.innerHTML) : el.textContent.trim();
+    if (val !== b.props[cfg.prop]) mutate(() => { b.props[cfg.prop] = val; }, { inspector: true });
+    el.removeEventListener('blur', finish);
+  };
+  el.addEventListener('blur', finish);
+  el.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' || (ev.key === 'Enter' && !cfg.rich)) {
+      ev.preventDefault();
+      el.blur();
+    }
   });
 });
 
