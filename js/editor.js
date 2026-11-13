@@ -12,6 +12,8 @@ let history = [];
 let future = [];
 let previewMode = false;
 let dragState = null;
+let newBlockType = null;
+let ghostEl = null;
 
 const PALETTES = {
   dark: { bg: '#0f1220', fg: '#ffffff' },
@@ -314,8 +316,23 @@ function renderLibrary() {
   for (const [type, bt] of Object.entries(BLOCK_TYPES)) {
     const el = document.createElement('button');
     el.className = 'lib-item';
+    el.draggable = true;
+    el.dataset.type = type;
     el.innerHTML = `<span class="lib-icon">${bt.icon}</span><span>${bt.name}</span>`;
     el.addEventListener('click', () => addBlock(type));
+    el.addEventListener('dragstart', e => {
+      if (previewMode) return;
+      newBlockType = type;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', 'new:' + type);
+      }
+    });
+    el.addEventListener('dragend', () => {
+      newBlockType = null;
+      dragState = null;
+      clearGhost();
+    });
     box.appendChild(el);
   }
 }
@@ -492,46 +509,107 @@ $('#layers').addEventListener('click', e => {
   }
 });
 
+function clearGhost() {
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  $$('.bw.dragging').forEach(w => w.classList.remove('dragging'));
+}
+
+function makeGhostNew(type) {
+  const el = document.createElement('div');
+  el.className = 'bw ghost';
+  el.innerHTML = `<div class="bw-body">${renderBlockHtml({ id: '__ghost__', type, props: BLOCK_TYPES[type].defaults() })}</div>`;
+  return el;
+}
+
+function makeGhostMove(id) {
+  const src = $(`.bw[data-id="${id}"]`);
+  if (!src) return null;
+  const el = src.cloneNode(true);
+  el.classList.add('ghost');
+  el.classList.remove('selected', 'dragging', 'drop-before', 'drop-after');
+  return el;
+}
+
+function positionGhost(wrap, before) {
+  const key = `${dragState.kind}:${dragState.kind === 'new' ? dragState.type : dragState.id}|${dragState.targetId || ''}|${before ? 'b' : 'a'}`;
+  if (ghostEl && ghostEl.dataset.key === key) return;
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  ghostEl = dragState.kind === 'new' ? makeGhostNew(dragState.type) : makeGhostMove(dragState.id);
+  if (!ghostEl) return;
+  ghostEl.dataset.key = key;
+  if (wrap) {
+    wrap.parentNode.insertBefore(ghostEl, before ? wrap : wrap.nextSibling);
+  } else {
+    $('#canvas').appendChild(ghostEl);
+  }
+}
+
 $('#canvas').addEventListener('dragstart', e => {
   const wrap = e.target.closest('.bw');
   if (!wrap || previewMode) return;
-  dragState = { id: wrap.dataset.id, targetId: null, before: false };
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', wrap.dataset.id);
+  dragState = { kind: 'move', id: wrap.dataset.id, targetId: null, before: false };
+  wrap.classList.add('dragging');
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', wrap.dataset.id);
+  }
 });
 
 $('#canvas').addEventListener('dragover', e => {
-  if (!dragState) return;
+  if (!dragState && !newBlockType) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
+  if (e.dataTransfer) e.dataTransfer.dropEffect = newBlockType ? 'copy' : 'move';
+  if (!dragState) dragState = { kind: 'new', type: newBlockType, targetId: null, before: false };
   const wrap = e.target.closest('.bw');
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
-  if (!wrap || wrap.dataset.id === dragState.id) {
+  if (wrap && wrap.classList.contains('ghost')) return;
+  if (!wrap || (dragState.kind === 'move' && wrap.dataset.id === dragState.id)) {
     dragState.targetId = null;
+    if (dragState.kind === 'new') positionGhost(null, false);
+    else if (ghostEl) {
+      ghostEl.remove();
+      ghostEl = null;
+    }
     return;
   }
   const rect = wrap.getBoundingClientRect();
   const before = e.clientY < rect.top + rect.height / 2;
-  wrap.classList.add(before ? 'drop-before' : 'drop-after');
   dragState.targetId = wrap.dataset.id;
   dragState.before = before;
+  positionGhost(wrap, before);
 });
 
 $('#canvas').addEventListener('drop', e => {
   if (!dragState) return;
   e.preventDefault();
-  const { id, targetId, before } = dragState;
+  const ds = dragState;
   dragState = null;
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
+  newBlockType = null;
+  clearGhost();
   const blocks = page().blocks;
-  const from = blocks.findIndex(b => b.id === id);
-  if (from === -1) return;
+  if (ds.kind === 'move' && !ds.targetId) return;
   let to = blocks.length;
-  if (targetId) {
-    const ti = blocks.findIndex(b => b.id === targetId);
+  if (ds.targetId) {
+    const ti = blocks.findIndex(b => b.id === ds.targetId);
     if (ti === -1) return;
-    to = before ? ti : ti + 1;
+    to = ds.before ? ti : ti + 1;
   }
+  if (ds.kind === 'new') {
+    if (!BLOCK_TYPES[ds.type]) return;
+    const b = { id: uid(), type: ds.type, props: BLOCK_TYPES[ds.type].defaults() };
+    mutate(() => {
+      blocks.splice(to, 0, b);
+      selectedId = b.id;
+    }, { inspector: true });
+    return;
+  }
+  const from = blocks.findIndex(b => b.id === ds.id);
+  if (from === -1) return;
   if (from < to) to -= 1;
   if (from === to) return;
   mutate(() => {
@@ -542,7 +620,49 @@ $('#canvas').addEventListener('drop', e => {
 
 $('#canvas').addEventListener('dragend', () => {
   dragState = null;
-  $$('.bw').forEach(w => w.classList.remove('drop-before', 'drop-after'));
+  newBlockType = null;
+  clearGhost();
+  renderCanvas();
+});
+
+$('#canvas').addEventListener('dblclick', e => {
+  if (previewMode) return;
+  const wrap = e.target.closest('.bw');
+  if (!wrap) return;
+  const b = page().blocks.find(x => x.id === wrap.dataset.id);
+  if (!b) return;
+  const cfg = (BLOCK_TYPES[b.type].inlineEdit || []).find(c => e.target.closest(c.sel));
+  if (!cfg) return;
+  e.preventDefault();
+  selectedId = b.id;
+  renderCanvas();
+  renderLayers();
+  renderInspector();
+  requestAnimationFrame(() => {
+    const wrap2 = $(`.bw[data-id="${b.id}"]`);
+    const el = wrap2 && wrap2.querySelector(cfg.sel);
+    if (!el) return;
+    el.contentEditable = 'true';
+    el.classList.add('inline-edit');
+    el.focus();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      el.contentEditable = 'false';
+      el.classList.remove('inline-edit');
+      const val = cfg.rich ? sanitizeRich(el.innerHTML) : el.textContent.trim();
+      if (val !== b.props[cfg.prop]) mutate(() => { b.props[cfg.prop] = val; }, { inspector: true });
+      el.removeEventListener('blur', finish);
+    };
+    el.addEventListener('blur', finish);
+    el.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape' || (ev.key === 'Enter' && !cfg.rich)) {
+        ev.preventDefault();
+        el.blur();
+      }
+    });
+  });
 });
 
 $('#inspector').addEventListener('focusin', e => {

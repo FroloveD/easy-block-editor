@@ -30,6 +30,11 @@ const BLOCK_TYPES = {
       { key: 'bg', label: t('f.bg'), type: 'color' },
       { key: 'color', label: t('f.color'), type: 'color' },
     ],
+    inlineEdit: [
+      { sel: 'h1', prop: 'title' },
+      { sel: 'p', prop: 'subtitle' },
+      { sel: '.b-btn', prop: 'buttonText' },
+    ],
     render: p => `<section class="b-hero" style="background:${esc(p.bg)};color:${esc(p.color)}">
   <h1>${esc(p.title)}</h1>
   <p>${esc(p.subtitle)}</p>
@@ -50,6 +55,9 @@ const BLOCK_TYPES = {
       ] },
       { key: 'align', label: t('f.align'), type: 'select', options: ALIGN },
     ],
+    inlineEdit: [
+      { sel: '.b-heading', prop: 'text' },
+    ],
     render: p => `<div class="b-container" style="padding-top:56px">
   <${p.level || 'h2'} class="b-heading ${esc(p.level)}" style="text-align:${esc(p.align)}">${esc(p.text)}</${p.level || 'h2'}>
 </div>`,
@@ -62,6 +70,9 @@ const BLOCK_TYPES = {
     fields: [
       { key: 'content', label: t('f.content'), type: 'rich' },
       { key: 'align', label: t('f.align'), type: 'select', options: ALIGN },
+    ],
+    inlineEdit: [
+      { sel: '.b-text', prop: 'content', rich: true },
     ],
     render: p => {
       const raw = String(p.content ?? '');
@@ -145,6 +156,9 @@ const BLOCK_TYPES = {
       { key: 'alt', label: t('f.alt'), type: 'text' },
       { key: 'caption', label: t('f.caption'), type: 'text' },
     ],
+    inlineEdit: [
+      { sel: 'figcaption', prop: 'caption' },
+    ],
     render: p => `<figure class="b-section b-image" style="padding-top:24px"><div class="b-container">
   <img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy">
   ${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}
@@ -199,6 +213,11 @@ const BLOCK_TYPES = {
       { key: 'bg', label: t('f.bg'), type: 'color' },
       { key: 'color', label: t('f.color'), type: 'color' },
     ],
+    inlineEdit: [
+      { sel: 'h2', prop: 'title' },
+      { sel: 'p', prop: 'text' },
+      { sel: '.b-btn', prop: 'buttonText' },
+    ],
     render: p => `<section class="b-cta" style="background:${esc(p.bg)};color:${esc(p.color)}"><div class="b-container">
   <h2>${esc(p.title)}</h2>
   <p>${esc(p.text)}</p>
@@ -224,6 +243,9 @@ const BLOCK_TYPES = {
       { key: 'text', label: t('f.text'), type: 'text' },
       { key: 'bg', label: t('f.bg'), type: 'color' },
       { key: 'color', label: t('f.color'), type: 'color' },
+    ],
+    inlineEdit: [
+      { sel: '.b-container', prop: 'text' },
     ],
     render: p => `<footer class="b-footer" style="background:${esc(p.bg)};color:${esc(p.color)}"><div class="b-container">${esc(p.text)}</div></footer>`,
   },

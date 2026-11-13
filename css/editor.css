@@ -227,8 +227,19 @@ body {
 .bw:hover { border-color: rgba(79, 70, 229, .45); }
 .bw.selected { border-color: var(--accent); }
 
-.bw.drop-before { box-shadow: inset 0 3px 0 0 var(--accent); }
-.bw.drop-after { box-shadow: inset 0 -3px 0 0 var(--accent); }
+.bw.dragging .bw-body { display: none; }
+.bw.dragging { min-height: 8px; background: var(--accent-soft); border-radius: 8px; }
+
+.bw.ghost {
+  opacity: .55;
+  pointer-events: none;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  min-height: 8px;
+}
+
+.bw.ghost .bw-bar { display: none; }
+.bw.ghost .bw-body > * { pointer-events: none; }
 
 .bw-bar {
   position: absolute;
@@ -273,6 +284,13 @@ body {
 .bw-actions button:hover { background: rgba(255, 255, 255, .22); }
 
 .bw-body a { pointer-events: none; }
+
+.bw-body .inline-edit {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  cursor: text;
+  min-height: 1em;
+}
 
 #fonts-panel {
   margin-bottom: 16px;
