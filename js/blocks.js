@@ -262,6 +262,32 @@ const BLOCK_TYPES = {
 </div></section>`,
   },
 
+  button: {
+    name: t('blocks.button'),
+    icon: '⬭',
+    defaults: () => ({ text: t('c.ctaButton'), link: '#', variant: 'solid', size: 'normal', align: 'left' }),
+    fields: [
+      { key: 'text', label: t('f.text'), type: 'text' },
+      { key: 'link', label: t('f.buttonLink'), type: 'text' },
+      { key: 'variant', label: t('f.variant'), type: 'select', options: [
+        { value: 'solid', label: t('opt.solid') },
+        { value: 'outline', label: t('opt.outline') },
+        { value: 'ghost', label: t('opt.ghost') },
+      ] },
+      { key: 'size', label: t('f.size'), type: 'select', options: [
+        { value: 'normal', label: t('opt.sizeNormal') },
+        { value: 'large', label: t('opt.sizeLarge') },
+      ] },
+      { key: 'align', label: t('f.align'), type: 'select', options: [...ALIGN, { value: 'right', label: t('opt.right') }] },
+    ],
+    inlineEdit: [
+      { sel: '.b-btn', prop: 'text' },
+    ],
+    render: p => `<div class="b-container" style="padding-top:32px;text-align:${esc(p.align)}">
+  <a class="b-btn b-btn-${esc(p.variant)}${p.size === 'large' ? ' b-btn-large' : ''}" href="${esc(p.link)}">${esc(p.text)}</a>
+</div>`,
+  },
+
   spacer: {
     name: t('blocks.spacer'),
     icon: '↕',
