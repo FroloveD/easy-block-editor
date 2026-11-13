@@ -242,10 +242,58 @@ function renderCanvas() {
   });
 }
 
+const FORMATS = {
+  site: { maxw: '1100px' },
+  card: { maxw: '700px', width: 700, ratio: 1.75 },
+  poster: { maxw: '640px', width: 640, ratio: 1 / 1.414 },
+};
+
+const FORMAT_OPTS = () => [
+  { value: 'site', label: t('fmt.site') },
+  { value: 'card', label: t('fmt.card') },
+  { value: 'poster', label: t('fmt.poster') },
+];
+
 function ensureFonts(s) {
   if (!Array.isArray(s.fonts)) s.fonts = [];
   s.fonts = s.fonts.filter(f => f && (f.kind === 'google' || f.kind === 'local'));
   if (typeof s.fontFamily !== 'string') s.fontFamily = '';
+  if (!FORMATS[s.format]) s.format = 'site';
+}
+
+function applyFormat() {
+  const f = FORMATS[site.format] || FORMATS.site;
+  $('#canvas-frame').style.maxWidth = f.maxw;
+}
+
+function renderFormatSelect() {
+  const sel = $('#format-select');
+  sel.innerHTML = FORMAT_OPTS().map(o =>
+    `<option value="${o.value}" ${site.format === o.value ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  sel.value = site.format || 'site';
+}
+
+function renderTemplatesSelect() {
+  const sel = $('#templates-select');
+  sel.innerHTML = `<option value="">${t('app.templates')}</option>` +
+    Object.entries(TEMPLATES).map(([k, tpl]) => `<option value="${k}">${esc(tpl.name)}</option>`).join('');
+  sel.value = '';
+}
+
+function applyTemplate(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) return;
+  if (!confirm(t('confirm.template', { name: tpl.name }))) return;
+  snapshot();
+  const next = tpl.build();
+  ensureFonts(next);
+  sanitizeSite(next);
+  site = next;
+  selectedId = null;
+  persist();
+  renderAll();
+  applyFontAssets();
+  applyFormat();
 }
 
 function googleFontsUrl(family) {
@@ -799,6 +847,19 @@ $('#pages-select').addEventListener('change', e => {
   renderAll();
 });
 
+$('#format-select').addEventListener('change', e => {
+  if (!FORMATS[e.target.value]) return;
+  mutate(() => { site.format = e.target.value; });
+  applyFormat();
+  renderFormatSelect();
+});
+
+$('#templates-select').addEventListener('change', e => {
+  const key = e.target.value;
+  e.target.value = '';
+  applyTemplate(key);
+});
+
 $('#btn-add-page').addEventListener('click', () => {
   mutate(() => {
     const p = { id: uid(), title: t('sample.newPage'), blocks: [] };
@@ -923,6 +984,18 @@ function download(name, text, mime) {
   URL.revokeObjectURL(a.href);
 }
 
+function formatDocCss() {
+  const f = FORMATS[site.format];
+  if (!f || !f.width) return '';
+  const minH = f.ratio ? `min-height:calc(${f.width}px / ${f.ratio.toFixed(3)});` : '';
+  return `<style>body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#e9ebf2;padding:24px;box-sizing:border-box}.b-doc{width:${f.width}px;max-width:100%;${minH}overflow:hidden;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);background:#fff}</style>`;
+}
+
+function docWrap(inner) {
+  const f = FORMATS[site.format];
+  return f && f.width ? `<div class="b-doc">${inner}</div>` : inner;
+}
+
 function buildHtml() {
   const p = page();
   const blocks = p.blocks.map(renderBlockHtml).join('\n');
@@ -934,16 +1007,17 @@ function buildHtml() {
 <title>${esc(p.title)}</title>
 <style>${SITE_CSS}</style>
 ${fontsHeadHtml()}
+${formatDocCss()}
 </head>
 <body${bodyFontAttr()}>
-${blocks}
+${docWrap(blocks)}
 </body>
 </html>`;
 }
 
 function buildSiteHtml() {
   const nav = `<nav class="b-site-nav">${site.pages.map(p => `<a href="#/${p.id}" data-page-link="${esc(p.id)}">${esc(p.title)}</a>`).join('')}</nav>`;
-  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(renderBlockHtml).join('\n')}\n</div>`).join('\n');
+  const pages = docWrap(site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(renderBlockHtml).join('\n')}\n</div>`).join('\n'));
   const router = `
 <script>
 (function () {
@@ -1005,6 +1079,8 @@ function importData(raw) {
   persist();
   renderAll();
   applyFontAssets();
+  applyFormat();
+  renderFormatSelect();
 }
 
 $('#file-json').addEventListener('change', e => {
@@ -1045,6 +1121,63 @@ document.addEventListener('keydown', e => {
 function mkBlock(type, patch = {}) {
   return { id: uid(), type, props: Object.assign(BLOCK_TYPES[type].defaults(), patch) };
 }
+
+const TEMPLATES = {
+  site: {
+    name: () => t('tpl.site'),
+    desc: () => t('tpl.siteDesc'),
+    format: 'site',
+    build: () => sampleSite(),
+  },
+  card: {
+    name: () => t('tpl.card'),
+    desc: () => t('tpl.cardDesc'),
+    format: 'card',
+    build: () => {
+      const p = {
+        id: uid(),
+        title: t('tpl.cardPage'),
+        blocks: [
+          mkBlock('hero', {
+            title: t('sample.heroTitle'),
+            subtitle: t('sample.heroSubtitle'),
+            buttonText: t('c.ctaButton'),
+            buttonLink: 'https://t.me/username',
+          }),
+          mkBlock('columns', {
+            title: '',
+            count: '3',
+            items: [
+              { title: t('c.col1t'), text: t('c.col1d') },
+              { title: t('c.col2t'), text: t('c.col2d') },
+              { title: t('c.col3t'), text: t('c.col3d') },
+            ],
+          }),
+          mkBlock('footer', { text: t('sample.footerText') }),
+        ],
+      };
+      return { pages: [p], currentPageId: p.id, format: 'card' };
+    },
+  },
+  poster: {
+    name: () => t('tpl.poster'),
+    desc: () => t('tpl.posterDesc'),
+    format: 'poster',
+    build: () => {
+      const p = {
+        id: uid(),
+        title: t('tpl.posterPage'),
+        blocks: [
+          mkBlock('heading', { text: t('sample.heroTitle'), level: 'h1', align: 'center' }),
+          mkBlock('image', { src: ph(t('ph.poster'), '#e8e2f0'), alt: t('c.capPoster') }),
+          mkBlock('text', { content: t('sample.heroSubtitle'), align: 'center' }),
+          mkBlock('footer', { text: t('sample.footerText') }),
+        ],
+      };
+      return { pages: [p], currentPageId: p.id, format: 'poster' };
+    },
+  },
+};
 
 function sampleSite() {
   const home = {
@@ -1107,6 +1240,9 @@ function init() {
   renderLibrary();
   renderAll();
   applyFontAssets();
+  applyFormat();
+  renderFormatSelect();
+  renderTemplatesSelect();
   applyLayersCollapsed();
 }
 
