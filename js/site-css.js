@@ -55,6 +55,16 @@ body {
 .b-card h3 { margin: 0 0 8px; font-size: 18px; }
 .b-card p { margin: 0; color: var(--muted); font-size: 15px; }
 
+.b-cols {
+  display: grid;
+  gap: 24px;
+}
+.b-col h3 { margin: 0 0 8px; font-size: 18px; }
+.b-col p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+@media (max-width: 720px) {
+  .b-cols { grid-template-columns: 1fr !important; }
+}
+
 .b-gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
