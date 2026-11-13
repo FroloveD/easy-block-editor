@@ -576,13 +576,14 @@ $('#canvas').addEventListener('dragover', e => {
   if (!dragState) dragState = { kind: 'new', type: newBlockType, targetId: null, before: false };
   const wrap = e.target.closest('.bw');
   if (wrap && wrap.classList.contains('ghost')) return;
-  if (!wrap || (dragState.kind === 'move' && wrap.dataset.id === dragState.id)) {
-    dragState.targetId = null;
+  if (!wrap) {
     if (dragState.kind === 'new') positionGhost(null, false);
-    else if (ghostEl) {
-      ghostEl.remove();
-      ghostEl = null;
-    }
+    return;
+  }
+  if (dragState.kind === 'move' && wrap.dataset.id === dragState.id) {
+    dragState.targetId = dragState.id;
+    dragState.before = true;
+    positionGhost(wrap, true);
     return;
   }
   const rect = wrap.getBoundingClientRect();
