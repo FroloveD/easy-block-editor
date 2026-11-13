@@ -50,6 +50,18 @@ body {
   margin-right: 6px;
 }
 
+.pages-select {
+  max-width: 170px;
+  padding: 6px 8px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 8px;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  font: inherit;
+}
+
+.pages-select:focus { outline: 1px solid var(--accent); }
+
 .page-title {
   width: 220px;
   padding: 6px 10px;
