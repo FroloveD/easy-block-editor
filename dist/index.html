@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Портфолио</title>
+<style>
+:root {
+  --ink: #16181d;
+  --muted: #6b7280;
+  --accent: #4f46e5;
+  --surface: #f4f5f7;
+  --border: #e5e7eb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: #fff;
+  line-height: 1.6;
+}
+.b-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.b-section { padding: 72px 0; }
+.b-title { font-size: 32px; letter-spacing: -0.02em; margin: 0 0 32px; }
+.b-btn {
+  display: inline-block;
+  padding: 13px 30px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity .15s ease;
+}
+.b-btn:hover { opacity: .88; }
+.b-btn-light { background: #fff; color: #111; }
+
+.b-hero { padding: 120px 24px; text-align: center; }
+.b-hero h1 { font-size: clamp(36px, 6vw, 62px); letter-spacing: -0.02em; margin: 0 0 16px; }
+.b-hero p { font-size: 19px; opacity: .85; max-width: 640px; margin: 0 auto 32px; }
+
+.b-heading { margin: 0; letter-spacing: -0.02em; }
+.b-heading.h1 { font-size: clamp(32px, 5vw, 52px); }
+.b-heading.h2 { font-size: clamp(26px, 4vw, 38px); }
+.b-heading.h3 { font-size: clamp(20px, 3vw, 26px); }
+
+.b-text p { margin: 0 0 14px; font-size: 17px; color: #374151; }
+
+.b-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+}
+.b-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 26px;
+}
+.b-card h3 { margin: 0 0 8px; font-size: 18px; }
+.b-card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+.b-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.b-fig { margin: 0; }
+.b-fig img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 14px;
+  display: block;
+  background: var(--surface);
+}
+.b-fig figcaption { font-size: 14px; color: var(--muted); padding: 8px 2px 0; }
+
+.b-image img {
+  width: 100%;
+  border-radius: 16px;
+  display: block;
+  background: var(--surface);
+}
+.b-image figcaption { font-size: 14px; color: var(--muted); padding-top: 10px; text-align: center; }
+
+.b-details {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 0;
+}
+.b-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 17px;
+}
+.b-details p { margin: 10px 0 0; color: var(--muted); }
+
+.b-cta { padding: 96px 24px; text-align: center; }
+.b-cta h2 { font-size: clamp(28px, 4vw, 42px); letter-spacing: -0.02em; margin: 0 0 14px; }
+.b-cta p { font-size: 18px; opacity: .85; max-width: 560px; margin: 0 auto 30px; }
+
+.b-footer { padding: 34px 0; font-size: 14px; }
+
+.b-spacer { width: 100%; }
+
+.b-site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  justify-content: center;
+  padding: 16px 24px;
+  background: #0f1220;
+}
+
+.b-site-nav a {
+  color: #9aa1ad;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 2px 0;
+}
+
+.b-site-nav a:hover { color: #fff; }
+
+.b-site-nav a.active {
+  color: #fff;
+  border-bottom: 2px solid #4f46e5;
+}
+
+@media (max-width: 640px) {
+  .b-section { padding: 48px 0; }
+  .b-hero { padding: 72px 20px; }
+  .b-cta { padding: 64px 20px; }
+}
+</style>
+</head>
+<body>
+<nav class="b-site-nav"><a href="#/home" data-page-link="home">Портфолио</a><a href="#/contacts" data-page-link="contacts">Контакты</a></nav>
+<div class="b-page" data-page-id="home">
+<section class="b-hero" style="background:#0f1220;color:#ffffff">
+  <h1>Дмитрий Ушаров</h1>
+  <p>Графический дизайнер: айдентика, 3D-графика и концепт-арт. Помогаю брендам обрести визуальный голос.</p>
+  <a class="b-btn" href="#works">Смотреть работы</a>
+</section>
+<section class="b-section"><div class="b-container">
+  <h2 class="b-title">Направления</h2>
+  <div class="b-cards-grid">
+    <div class="b-card"><h3>Айдентика</h3><p>Логотип, фирменный стиль, гайдлайны.</p></div>
+    <div class="b-card"><h3>3D-графика</h3><p>Рендеры продуктов и визуализации.</p></div>
+    <div class="b-card"><h3>Иллюстрации</h3><p>Концепт-арт и авторская графика.</p></div>
+  </div>
+</div></section>
+<section class="b-section"><div class="b-container">
+  <h2 class="b-title">Избранные работы</h2>
+  <div class="b-gallery-grid">
+    <figure class="b-fig"><img src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23e3e6f0%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%235b6478%22%20font-family%3D%22sans-serif%22%20font-size%3D%2240%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%D0%A0%D0%B5%D0%BD%D0%B4%D0%B5%D1%80%3C%2Ftext%3E%3C%2Fsvg%3E" alt="3D-визуализация" loading="lazy"><figcaption>3D-визуализация</figcaption></figure>
+    <figure class="b-fig"><img src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23e8e2f0%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%235b6478%22%20font-family%3D%22sans-serif%22%20font-size%3D%2240%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%D0%9F%D0%BE%D1%81%D1%82%D0%B5%D1%80%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Постер" loading="lazy"><figcaption>Постер</figcaption></figure>
+    <figure class="b-fig"><img src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23e2efe8%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%235b6478%22%20font-family%3D%22sans-serif%22%20font-size%3D%2240%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%D0%9B%D0%BE%D0%B3%D0%BE%D1%82%D0%B8%D0%BF%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Знак" loading="lazy"><figcaption>Знак</figcaption></figure>
+  </div>
+</div></section>
+<section class="b-section"><div class="b-container" style="max-width:760px">
+  <h2 class="b-title">Частые вопросы</h2>
+  <details class="b-details"><summary>Как начинается работа?</summary><p>С короткого созвона: обсуждаем задачу, сроки и бюджет.</p></details>
+  <details class="b-details"><summary>Сколько занимает проект?</summary><p>Обычно от одной до четырёх недель в зависимости от объёма.</p></details>
+  <details class="b-details"><summary>Что входит в результат?</summary><p>Исходники, экспорт в нужных форматах и краткий гайд по использованию.</p></details>
+</div></section>
+<section class="b-cta" style="background:#0f1220;color:#ffffff"><div class="b-container">
+  <h2>Обсудим ваш проект?</h2>
+  <p>Расскажите о задаче — предложу решение и оценю сроки.</p>
+  <a class="b-btn b-btn-light" href="#">Написать мне</a>
+</div></section>
+<footer class="b-footer" style="background:#0f1220;color:#9aa1ad"><div class="b-container">© 2025 Дмитрий Ушаров</div></footer>
+</div>
+<div class="b-page" data-page-id="contacts">
+<div class="b-container" style="padding-top:56px">
+  <h2 class="b-heading h2" style="text-align:left">Контакты</h2>
+</div>
+<div class="b-container b-section" style="padding-top:24px">
+  <div class="b-text" style="text-align:left;max-width:720px;">
+    Телеграм: @username<br>Email: hello@example.com<br>Город: Тюмень
+  </div>
+</div>
+<section class="b-cta" style="background:#0f1220;color:#ffffff"><div class="b-container">
+  <h2>Обсудим ваш проект?</h2>
+  <p>Расскажите о задаче — предложу решение и оценю сроки.</p>
+  <a class="b-btn b-btn-light" href="#">Написать мне</a>
+</div></section>
+<footer class="b-footer" style="background:#0f1220;color:#9aa1ad"><div class="b-container">© 2025 Дмитрий Ушаров</div></footer>
+</div>
+<script>
+(function () {
+  var sitePages = [].slice.call(document.querySelectorAll(".b-page"));
+  function show() {
+    var id = location.hash.slice(2);
+    var target = sitePages.filter(function (p) { return p.dataset.pageId === id; })[0] || sitePages[0];
+    sitePages.forEach(function (p) { p.hidden = p !== target; });
+    [].slice.call(document.querySelectorAll(".b-site-nav a")).forEach(function (a) {
+      a.classList.toggle("active", a.dataset.pageLink === target.dataset.pageId);
+    });
+  }
+  window.addEventListener("hashchange", show);
+  show();
+})();
+</script>
+</body>
+</html>
