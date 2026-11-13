@@ -62,6 +62,12 @@ npx serve .
   история изменений, рендер canvas и инспектора, drag-and-drop, экспорт/импорт.
 - `css/editor.css` — оформление самого редактора (в экспорт не попадает).
 
+## Демо онлайн
+
+- Редактор: https://froloved.github.io/easy-block-editor/
+- Пример собранного сайта (результат «Экспорта сайта»):
+  https://froloved.github.io/easy-block-editor/demo/
+
 ## Публикация на GitHub Pages
 
 1. В редакторе нажмите «Экспорт сайта» — скачается один файл `index.html`
