@@ -115,6 +115,9 @@ function updateHistoryButtons() {
   $('#btn-redo').disabled = !future.length;
 }
 
+let collapsedBlocks = new Set();
+let layersCollapsed = store.getItem('block-editor:layers-collapsed') === '1';
+
 function renderLayers() {
   const box = $('#layers');
   const p = page();
@@ -123,15 +126,22 @@ function renderLayers() {
     const bt = BLOCK_TYPES[b.type];
     if (!bt) return;
     const sel = b.id === selectedId && !previewMode ? ' selected' : '';
-    rows.push(`<div class="layer-row${sel}" data-id="${b.id}"><span class="lib-icon">${bt.icon}</span><span class="layer-name">${bt.name}</span></div>`);
     const f = (bt.fields || []).find(x => x.type === 'items');
-    if (!f) return;
+    const kids = f ? (b.props[f.key] || []).length : 0;
+    const fold = kids ? `<button class="layer-fold" data-fold="${b.id}" title="${t('title.fold')}">${collapsedBlocks.has(b.id) ? '▸' : '▾'}</button>` : '<span class="layer-fold-spacer"></span>';
+    rows.push(`<div class="layer-row${sel}" data-id="${b.id}">${fold}<span class="lib-icon">${bt.icon}</span><span class="layer-name">${bt.name}</span></div>`);
+    if (!f || collapsedBlocks.has(b.id)) return;
     (b.props[f.key] || []).forEach((it, i) => {
       const label = f.itemLabel ? f.itemLabel(it, i) : t('item.n', { n: i + 1 });
       rows.push(`<div class="layer-row layer-child${sel}" data-id="${b.id}" data-fkey="${f.key}" data-idx="${i}">└ ${esc(label)}</div>`);
     });
   });
   box.innerHTML = rows.join('');
+}
+
+function applyLayersCollapsed() {
+  $('#layers').hidden = layersCollapsed;
+  $('#btn-layers-toggle').textContent = layersCollapsed ? '+' : '−';
 }
 
 function renderAll() {
@@ -458,6 +468,14 @@ $('#canvas').addEventListener('click', e => {
 
 $('#layers').addEventListener('click', e => {
   if (previewMode) return;
+  const fold = e.target.closest('.layer-fold');
+  if (fold) {
+    const id = fold.dataset.fold;
+    if (collapsedBlocks.has(id)) collapsedBlocks.delete(id);
+    else collapsedBlocks.add(id);
+    renderLayers();
+    return;
+  }
   const row = e.target.closest('.layer-row');
   if (!row || !row.dataset.id) return;
   if (!page().blocks.some(b => b.id === row.dataset.id)) return;
@@ -737,6 +755,12 @@ $('#default-font-select').addEventListener('change', e => {
   renderFontsPanel();
 });
 
+$('#btn-layers-toggle').addEventListener('click', () => {
+  layersCollapsed = !layersCollapsed;
+  store.setItem('block-editor:layers-collapsed', layersCollapsed ? '1' : '0');
+  applyLayersCollapsed();
+});
+
 $('#btn-preview').addEventListener('click', () => {
   previewMode = !previewMode;
   document.body.classList.toggle('preview', previewMode);
@@ -943,6 +967,7 @@ function init() {
   renderLibrary();
   renderAll();
   applyFontAssets();
+  applyLayersCollapsed();
 }
 
 init();
