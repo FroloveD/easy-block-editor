@@ -84,6 +84,12 @@ body {
 }
 .b-fig figcaption { font-size: 14px; color: var(--muted); padding: 8px 2px 0; }
 
+[style*="--b-ratio"] .b-fig img,
+[style*="--b-ratio"] .b-image img {
+  aspect-ratio: var(--b-ratio);
+  object-fit: cover;
+}
+
 .b-image img {
   width: 100%;
   border-radius: 16px;
