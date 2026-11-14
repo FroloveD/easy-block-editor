@@ -243,9 +243,9 @@ function renderCanvas() {
 }
 
 const FORMATS = {
-  site: { maxw: '1100px' },
-  card: { maxw: '700px', width: 700, ratio: 1.75 },
-  poster: { maxw: '640px', width: 640, ratio: 1 / 1.414 },
+  site: { maxw: '1100px', width: 1100, height: 0 },
+  card: { maxw: '700px', width: 700, height: 1225, ratio: 1.75 },
+  poster: { maxw: '640px', width: 640, height: 905, ratio: 1 / 1.414 },
 };
 
 const FORMAT_OPTS = () => [
@@ -262,11 +262,16 @@ function ensureFonts(s) {
   if (typeof s.textFont !== 'string') s.textFont = '';
   if (typeof s.buttonFont !== 'string') s.buttonFont = '';
   if (!FORMATS[s.format]) s.format = 'site';
+  if (!Number.isInteger(s.docWidth) || s.docWidth < 200) s.docWidth = FORMATS[s.format].width;
+  if (!Number.isInteger(s.docHeight) || s.docHeight < 0) s.docHeight = FORMATS[s.format].height;
 }
 
 function applyFormat() {
   const f = FORMATS[site.format] || FORMATS.site;
-  $('#canvas-frame').style.maxWidth = f.maxw;
+  $('#canvas-frame').style.maxWidth = (site.docWidth ? site.docWidth + 'px' : f.maxw);
+  const w = $('#doc-width'), h = $('#doc-height');
+  if (w) w.value = site.docWidth || '';
+  if (h) h.value = site.docHeight || '';
 }
 
 function renderFormatSelect() {
@@ -279,14 +284,14 @@ function renderFormatSelect() {
 function renderTemplatesSelect() {
   const sel = $('#templates-select');
   sel.innerHTML = `<option value="">${t('app.templates')}</option>` +
-    Object.entries(TEMPLATES).map(([k, tpl]) => `<option value="${k}">${esc(tpl.name)}</option>`).join('');
+    Object.entries(TEMPLATES).map(([k, tpl]) => `<option value="${k}">${esc(tpl.name())}</option>`).join('');
   sel.value = '';
 }
 
 function applyTemplate(key) {
   const tpl = TEMPLATES[key];
   if (!tpl) return;
-  if (!confirm(t('confirm.template', { name: tpl.name }))) return;
+  if (!confirm(t('confirm.template', { name: tpl.name() }))) return;
   snapshot();
   const next = tpl.build();
   ensureFonts(next);
@@ -876,9 +881,27 @@ $('#pages-select').addEventListener('change', e => {
 
 $('#format-select').addEventListener('change', e => {
   if (!FORMATS[e.target.value]) return;
-  mutate(() => { site.format = e.target.value; });
+  const f = FORMATS[e.target.value];
+  mutate(() => {
+    site.format = e.target.value;
+    site.docWidth = f.width;
+    site.docHeight = f.height;
+  });
   applyFormat();
   renderFormatSelect();
+});
+
+$('#doc-width').addEventListener('change', e => {
+  const v = Math.max(200, Math.min(4000, parseInt(e.target.value, 10) || 0));
+  if (!v) { applyFormat(); return; }
+  mutate(() => { site.docWidth = v; });
+  applyFormat();
+});
+
+$('#doc-height').addEventListener('change', e => {
+  const v = Math.max(0, Math.min(8000, parseInt(e.target.value, 10) || 0));
+  mutate(() => { site.docHeight = v; });
+  applyFormat();
 });
 
 $('#templates-select').addEventListener('change', e => {
@@ -1022,14 +1045,17 @@ function download(name, text, mime) {
 
 function formatDocCss() {
   const f = FORMATS[site.format];
-  if (!f || !f.width) return '';
-  const minH = f.ratio ? `min-height:calc(${f.width}px / ${f.ratio.toFixed(3)});` : '';
-  return `<style>body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#e9ebf2;padding:24px;box-sizing:border-box}.b-doc{width:${f.width}px;max-width:100%;${minH}overflow:hidden;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);background:#fff}</style>`;
+  if (!f || !f.ratio) return '';
+  const w = site.docWidth || f.width;
+  const minH = site.docHeight
+    ? `min-height:${site.docHeight}px;`
+    : (f.ratio ? `min-height:calc(${w}px / ${f.ratio.toFixed(3)});` : '');
+  return `<style>body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#e9ebf2;padding:24px;box-sizing:border-box}.b-doc{width:${w}px;max-width:100%;${minH}overflow:hidden;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);background:#fff}</style>`;
 }
 
 function docWrap(inner) {
   const f = FORMATS[site.format];
-  return f && f.width ? `<div class="b-doc">${inner}</div>` : inner;
+  return f && f.ratio ? `<div class="b-doc">${inner}</div>` : inner;
 }
 
 function buildHtml() {
