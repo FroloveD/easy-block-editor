@@ -13,6 +13,53 @@ let future = [];
 let previewMode = false;
 let dragState = null;
 
+const PALETTES = {
+  dark: { bg: '#0f1220', fg: '#ffffff' },
+  light: { bg: '#f5f6fa', fg: '#16181d' },
+  indigo: { bg: '#4f46e5', fg: '#ffffff' },
+  teal: { bg: '#0d9488', fg: '#ffffff' },
+  amber: { bg: '#f59e0b', fg: '#16181d' },
+  rose: { bg: '#e11d48', fg: '#ffffff' },
+};
+
+const SHADOWS = {
+  sm: '0 1px 3px rgba(0,0,0,.14)',
+  md: '0 6px 16px rgba(0,0,0,.18)',
+  lg: '0 16px 40px rgba(0,0,0,.26)',
+  glow: '0 0 0 4px rgba(79,70,229,.35)',
+};
+
+const FILTERS = {
+  gray: 'grayscale(1)',
+  blur: 'blur(2px)',
+  sepia: 'sepia(.55)',
+  bright: 'brightness(1.12)',
+};
+
+const STYLE_ALIGNS = [
+  { value: '', label: t('opt.inherit') },
+  { value: 'left', label: t('opt.left') },
+  { value: 'center', label: t('opt.center') },
+  { value: 'right', label: t('opt.right') },
+  { value: 'justify', label: t('opt.justify') },
+];
+
+const SHADOW_OPTS = [
+  { value: '', label: t('opt.shadowNone') },
+  { value: 'sm', label: t('opt.shadowSm') },
+  { value: 'md', label: t('opt.shadowMd') },
+  { value: 'lg', label: t('opt.shadowLg') },
+  { value: 'glow', label: t('opt.shadowGlow') },
+];
+
+const FILTER_OPTS = [
+  { value: '', label: t('opt.fxNone') },
+  { value: 'gray', label: t('opt.fxGray') },
+  { value: 'blur', label: t('opt.fxBlur') },
+  { value: 'sepia', label: t('opt.fxSepia') },
+  { value: 'bright', label: t('opt.fxBright') },
+];
+
 function page() {
   return site.pages.find(p => p.id === site.currentPageId) || site.pages[0];
 }
@@ -42,6 +89,7 @@ function mutate(fn, { record = true, inspector = false } = {}) {
   persist();
   renderCanvas();
   renderPagesSelect();
+  renderLayers();
   if (inspector) renderInspector();
 }
 
@@ -67,11 +115,53 @@ function updateHistoryButtons() {
   $('#btn-redo').disabled = !future.length;
 }
 
+function renderLayers() {
+  const box = $('#layers');
+  const p = page();
+  const rows = [`<div class="layer-root">${esc(p.title || t('sample.newPage'))}</div>`];
+  p.blocks.forEach(b => {
+    const bt = BLOCK_TYPES[b.type];
+    if (!bt) return;
+    const sel = b.id === selectedId && !previewMode ? ' selected' : '';
+    rows.push(`<div class="layer-row${sel}" data-id="${b.id}"><span class="lib-icon">${bt.icon}</span><span class="layer-name">${bt.name}</span></div>`);
+    const f = (bt.fields || []).find(x => x.type === 'items');
+    if (!f) return;
+    (b.props[f.key] || []).forEach((it, i) => {
+      const label = f.itemLabel ? f.itemLabel(it, i) : t('item.n', { n: i + 1 });
+      rows.push(`<div class="layer-row layer-child${sel}" data-id="${b.id}" data-fkey="${f.key}" data-idx="${i}">└ ${esc(label)}</div>`);
+    });
+  });
+  box.innerHTML = rows.join('');
+}
+
 function renderAll() {
   renderCanvas();
   renderPagesSelect();
+  renderLayers();
   renderInspector();
   updateHistoryButtons();
+}
+
+function styleCss(s = {}) {
+  const css = [];
+  if (s.width) css.push(`width:${s.width}`);
+  if (s.height) css.push(`height:${s.height}`);
+  if (Number(s.radius) > 0) css.push(`border-radius:${Number(s.radius)}px;overflow:hidden`);
+  if (s.align) css.push(`text-align:${s.align}`);
+  if (s.background) css.push(`background:${s.background}`);
+  if (s.color) css.push(`color:${s.color}`);
+  const op = Number(s.opacity);
+  if (Number.isFinite(op) && op < 100) css.push(`opacity:${Math.max(0, op) / 100}`);
+  if (s.shadow && SHADOWS[s.shadow]) css.push(`box-shadow:${SHADOWS[s.shadow]}`);
+  if (s.filter && FILTERS[s.filter]) css.push(`filter:${FILTERS[s.filter]}`);
+  return css.join(';');
+}
+
+function renderBlockHtml(b) {
+  const bt = BLOCK_TYPES[b.type];
+  if (!bt) return '';
+  const css = styleCss(b.style);
+  return css ? `<div class="b-style" style="${esc(css)}">${bt.render(b.props)}</div>` : bt.render(b.props);
 }
 
 function sanitizeRich(html) {
@@ -130,7 +220,7 @@ function renderCanvas() {
           <button data-act="del" title="${t('title.del')}">✕</button>
         </span>
       </div>
-      <div class="bw-body">${bt.render(b.props)}</div>`;
+      <div class="bw-body">${renderBlockHtml(b)}</div>`;
     canvas.appendChild(wrap);
   });
 }
@@ -245,7 +335,29 @@ function renderInspector() {
   }
   const bt = BLOCK_TYPES[b.type];
   const idBase = `p-${b.id}`;
-  box.innerHTML = `<h3>${bt.icon} ${bt.name}</h3>` + (bt.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('');
+  box.innerHTML = `<h3>${bt.icon} ${bt.name}</h3>` + (bt.fields || []).map(f => fieldHtml(f, b.props, idBase)).join('') + styleSectionHtml(b);
+}
+
+function styleSectionHtml(b) {
+  const s = b.style || {};
+  const id = `s-${b.id}`;
+  const pal = Object.entries(PALETTES).map(([k, p]) =>
+    `<button type="button" class="pal-btn" data-pal="${k}" title="${esc(p.bg)}" style="background:${p.bg}"><span style="color:${p.fg}">Aa</span></button>`).join('');
+  const opts = (list, key) => list.map(o => `<option value="${esc(o.value)}" ${String(s[key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  return `<div class="style-sec">
+  <h4>${t('app.style')}</h4>
+  <div class="pal-row">${pal}</div>
+  <label class="fld"><span>${t('f.width')}</span><input type="text" value="${esc(s.width || '')}" data-skey="width" placeholder="auto / 100% / 600px"></label>
+  <label class="fld"><span>${t('f.height')}</span><input type="text" value="${esc(s.height || '')}" data-skey="height" placeholder="auto / 400px"></label>
+  <label class="fld"><span>${t('f.radius')} <b data-out="${id}-radius">${esc(s.radius || 0)}px</b></span><input id="${id}-radius" type="range" min="0" max="60" step="2" value="${esc(s.radius || 0)}" data-skey="radius"></label>
+  <label class="fld"><span>${t('f.align')}</span><select data-skey="align">${opts(STYLE_ALIGNS, 'align')}</select></label>
+  <label class="fld"><span>${t('f.bg')}</span><input type="color" value="${esc(s.background || '#ffffff')}" data-skey="background"></label>
+  <label class="fld"><span>${t('f.color')}</span><input type="color" value="${esc(s.color || '#16181d')}" data-skey="color"></label>
+  <label class="fld"><span>${t('f.opacity')} <b data-out="${id}-opacity">${esc(s.opacity ?? 100)}%</b></span><input id="${id}-opacity" type="range" min="0" max="100" step="5" value="${esc(s.opacity ?? 100)}" data-skey="opacity"></label>
+  <label class="fld"><span>${t('f.shadow')}</span><select data-skey="shadow">${opts(SHADOW_OPTS, 'shadow')}</select></label>
+  <label class="fld"><span>${t('f.effects')}</span><select data-skey="filter">${opts(FILTER_OPTS, 'filter')}</select></label>
+  <button class="btn-ghost" data-sact="reset">${t('app.resetStyle')}</button>
+</div>`;
 }
 
 $('#canvas').addEventListener('click', e => {
@@ -276,7 +388,26 @@ $('#canvas').addEventListener('click', e => {
   if (wrap) {
     selectedId = wrap.dataset.id;
     renderCanvas();
+    renderLayers();
     renderInspector();
+  }
+});
+
+$('#layers').addEventListener('click', e => {
+  if (previewMode) return;
+  const row = e.target.closest('.layer-row');
+  if (!row || !row.dataset.id) return;
+  if (!page().blocks.some(b => b.id === row.dataset.id)) return;
+  selectedId = row.dataset.id;
+  renderCanvas();
+  renderLayers();
+  renderInspector();
+  if (row.dataset.fkey !== undefined) {
+    const card = $(`#inspector .item-card[data-fkey="${row.dataset.fkey}"][data-idx="${row.dataset.idx}"]`);
+    if (card) {
+      card.classList.add('active');
+      if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 });
 
@@ -375,6 +506,21 @@ $('#inspector').addEventListener('input', e => {
     renderCanvas();
     const out = $(`[data-out="${e.target.id}"]`);
     if (out) out.textContent = e.target.value + 'px';
+    return;
+  }
+  const skey = e.target.dataset.skey;
+  if (skey) {
+    b.style = b.style || {};
+    const val = e.target.value;
+    if (val === '' || (skey === 'radius' && Number(val) === 0) || (skey === 'opacity' && Number(val) === 100)) {
+      delete b.style[skey];
+    } else {
+      b.style[skey] = val;
+    }
+    persist();
+    renderCanvas();
+    const out = $(`[data-out="${e.target.id}"]`);
+    if (out) out.textContent = val + (skey === 'radius' ? 'px' : '%');
   }
 });
 
@@ -383,6 +529,23 @@ $('#inspector').addEventListener('click', e => {
   if (!btn) return;
   const b = current();
   if (!b) return;
+  const pal = btn.dataset.pal;
+  if (pal && PALETTES[pal]) {
+    const p = PALETTES[pal];
+    mutate(() => {
+      if ((BLOCK_TYPES[b.type].fields || []).some(f => f.key === 'bg')) {
+        b.props.bg = p.bg;
+        b.props.color = p.fg;
+      } else {
+        b.style = { ...(b.style || {}), background: p.bg, color: p.fg };
+      }
+    }, { inspector: true });
+    return;
+  }
+  if (btn.dataset.sact === 'reset') {
+    mutate(() => { b.style = {}; }, { inspector: true });
+    return;
+  }
   const iact = btn.dataset.iact;
   if (!iact) return;
   if (iact === 'add') {
@@ -474,9 +637,7 @@ function download(name, text, mime) {
 
 function buildHtml() {
   const p = page();
-  const blocks = p.blocks
-    .map(b => BLOCK_TYPES[b.type] ? BLOCK_TYPES[b.type].render(b.props) : '')
-    .join('\n');
+  const blocks = p.blocks.map(renderBlockHtml).join('\n');
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -493,7 +654,7 @@ ${blocks}
 
 function buildSiteHtml() {
   const nav = `<nav class="b-site-nav">${site.pages.map(p => `<a href="#/${p.id}" data-page-link="${esc(p.id)}">${esc(p.title)}</a>`).join('')}</nav>`;
-  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(b => BLOCK_TYPES[b.type] ? BLOCK_TYPES[b.type].render(b.props) : '').join('\n')}\n</div>`).join('\n');
+  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(renderBlockHtml).join('\n')}\n</div>`).join('\n');
   const router = `
 <script>
 (function () {
