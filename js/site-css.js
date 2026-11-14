@@ -98,6 +98,29 @@ body {
 
 .b-spacer { width: 100%; }
 
+.b-site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  justify-content: center;
+  padding: 16px 24px;
+  background: #0f1220;
+}
+
+.b-site-nav a {
+  color: #9aa1ad;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 2px 0;
+}
+
+.b-site-nav a:hover { color: #fff; }
+
+.b-site-nav a.active {
+  color: #fff;
+  border-bottom: 2px solid #4f46e5;
+}
+
 @media (max-width: 640px) {
   .b-section { padding: 48px 0; }
   .b-hero { padding: 72px 20px; }

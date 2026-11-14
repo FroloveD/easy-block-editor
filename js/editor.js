@@ -491,7 +491,44 @@ ${blocks}
 </html>`;
 }
 
+function buildSiteHtml() {
+  const nav = `<nav class="b-site-nav">${site.pages.map(p => `<a href="#/${p.id}" data-page-link="${esc(p.id)}">${esc(p.title)}</a>`).join('')}</nav>`;
+  const pages = site.pages.map(p => `<div class="b-page" data-page-id="${esc(p.id)}">\n${p.blocks.map(b => BLOCK_TYPES[b.type] ? BLOCK_TYPES[b.type].render(b.props) : '').join('\n')}\n</div>`).join('\n');
+  const router = `
+<script>
+(function () {
+  var sitePages = [].slice.call(document.querySelectorAll('.b-page'));
+  function show() {
+    var id = location.hash.slice(2);
+    var target = sitePages.filter(function (p) { return p.dataset.pageId === id; })[0] || sitePages[0];
+    sitePages.forEach(function (p) { p.hidden = p !== target; });
+    [].slice.call(document.querySelectorAll('.b-site-nav a')).forEach(function (a) {
+      a.classList.toggle('active', a.dataset.pageLink === target.dataset.pageId);
+    });
+  }
+  window.addEventListener('hashchange', show);
+  show();
+})();
+<\/script>`;
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(site.pages[0].title)}</title>
+<style>${SITE_CSS}</style>
+</head>
+<body>
+${nav}
+${pages}
+${router}
+</body>
+</html>`;
+}
+
 $('#btn-export').addEventListener('click', () => download('index.html', buildHtml(), 'text/html'));
+
+$('#btn-export-site').addEventListener('click', () => download('index.html', buildSiteHtml(), 'text/html'));
 
 $('#btn-json').addEventListener('click', () => download('site.json', JSON.stringify(site, null, 2), 'application/json'));
 
