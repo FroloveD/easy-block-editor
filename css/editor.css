@@ -250,6 +250,91 @@ body {
 
 .bw-body a { pointer-events: none; }
 
+#fonts-panel {
+  margin-bottom: 16px;
+}
+
+.font-add-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.font-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 8px;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  font: inherit;
+}
+
+.font-add-row input:focus { outline: 1px solid var(--accent); }
+
+#fonts-list {
+  margin-top: 10px;
+}
+
+.font-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.font-row:hover { background: rgba(255, 255, 255, .06); }
+
+.font-sample {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--chrome-border);
+  border-radius: 7px;
+  background: #fff;
+  color: #16181d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.font-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-name em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--chrome-muted);
+}
+
+.font-row button {
+  border: 0;
+  background: transparent;
+  color: var(--chrome-muted);
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.font-row button:hover {
+  background: rgba(220, 38, 38, .18);
+  color: var(--chrome-text);
+}
+
+.fld-font-default {
+  margin-top: 10px;
+}
+
 #layers {
   margin-bottom: 16px;
 }

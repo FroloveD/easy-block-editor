@@ -148,6 +148,7 @@ function styleCss(s = {}) {
   if (s.height) css.push(`height:${s.height}`);
   if (Number(s.radius) > 0) css.push(`border-radius:${Number(s.radius)}px;overflow:hidden`);
   if (s.align) css.push(`text-align:${s.align}`);
+  if (s.font) css.push(`font-family:'${s.font}'`);
   if (s.background) css.push(`background:${s.background}`);
   if (s.color) css.push(`color:${s.color}`);
   const op = Number(s.opacity);
@@ -223,6 +224,66 @@ function renderCanvas() {
       <div class="bw-body">${renderBlockHtml(b)}</div>`;
     canvas.appendChild(wrap);
   });
+}
+
+function ensureFonts(s) {
+  if (!Array.isArray(s.fonts)) s.fonts = [];
+  s.fonts = s.fonts.filter(f => f && (f.kind === 'google' || f.kind === 'local'));
+  if (typeof s.fontFamily !== 'string') s.fontFamily = '';
+}
+
+function googleFontsUrl(family) {
+  return 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(family).replace(/%20/g, '+') + ':wght@400;700&display=swap';
+}
+
+function fontFaceCss(f) {
+  return f.kind === 'local'
+    ? `@font-face{font-family:'${f.family}';src:url(${f.dataUrl}) format('${f.format}');font-display:swap;}`
+    : '';
+}
+
+function applyFontAssets() {
+  let style = $('#fonts-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'fonts-style';
+    document.head.appendChild(style);
+  }
+  style.textContent = site.fonts.map(fontFaceCss).join('\n');
+  document.querySelectorAll('link[data-font-link]').forEach(l => l.remove());
+  site.fonts.filter(f => f.kind === 'google').forEach(f => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = googleFontsUrl(f.family);
+    link.dataset.fontLink = '1';
+    document.head.appendChild(link);
+  });
+  $('#canvas').style.fontFamily = site.fontFamily || '';
+  renderFontsPanel();
+}
+
+function renderFontsPanel() {
+  const list = $('#fonts-list');
+  if (!site.fonts.length) {
+    list.innerHTML = `<p class="hint">${t('app.fontEmpty')}</p>`;
+  } else {
+    list.innerHTML = site.fonts.map((f, i) =>
+      `<div class="font-row"><span class="font-sample" style="font-family:'${esc(f.family)}'">Aa</span><span class="font-name">${esc(f.family)}${f.kind === 'local' ? ` <em>(${t('app.fontLocal')})</em>` : ''}</span><button data-dfont="${i}" title="${t('title.delFont')}">✕</button></div>`).join('');
+  }
+  const sel = $('#default-font-select');
+  sel.innerHTML = `<option value="">${t('app.fontInherit')}</option>` + site.fonts.map(f =>
+    `<option value="${esc(f.family)}" ${site.fontFamily === f.family ? 'selected' : ''}>${esc(f.family)}</option>`).join('');
+  sel.value = site.fontFamily || '';
+}
+
+function fontsHeadHtml() {
+  const links = site.fonts.filter(f => f.kind === 'google').map(f => `<link rel="stylesheet" href="${esc(googleFontsUrl(f.family))}">`).join('\n');
+  const faces = site.fonts.map(fontFaceCss).filter(Boolean).join('\n');
+  return (links ? links + '\n' : '') + (faces ? `<style>${faces}</style>` : '');
+}
+
+function bodyFontAttr() {
+  return site.fontFamily ? ` style="font-family:'${esc(site.fontFamily)}'"` : '';
 }
 
 function renderPagesSelect() {
@@ -344,9 +405,11 @@ function styleSectionHtml(b) {
   const pal = Object.entries(PALETTES).map(([k, p]) =>
     `<button type="button" class="pal-btn" data-pal="${k}" title="${esc(p.bg)}" style="background:${p.bg}"><span style="color:${p.fg}">Aa</span></button>`).join('');
   const opts = (list, key) => list.map(o => `<option value="${esc(o.value)}" ${String(s[key]) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  const fonts = [{ value: '', label: t('app.fontInherit') }].concat(site.fonts.map(f => ({ value: f.family, label: f.family })));
   return `<div class="style-sec">
   <h4>${t('app.style')}</h4>
   <div class="pal-row">${pal}</div>
+  <label class="fld"><span>${t('f.font')}</span><select data-skey="font">${opts(fonts, 'font')}</select></label>
   <label class="fld"><span>${t('f.width')}</span><input type="text" value="${esc(s.width || '')}" data-skey="width" placeholder="auto / 100% / 600px"></label>
   <label class="fld"><span>${t('f.height')}</span><input type="text" value="${esc(s.height || '')}" data-skey="height" placeholder="auto / 400px"></label>
   <label class="fld"><span>${t('f.radius')} <b data-out="${id}-radius">${esc(s.radius || 0)}px</b></span><input id="${id}-radius" type="range" min="0" max="60" step="2" value="${esc(s.radius || 0)}" data-skey="radius"></label>
@@ -613,6 +676,67 @@ $('#page-title-input').addEventListener('input', e => {
 $('#btn-undo').addEventListener('click', undo);
 $('#btn-redo').addEventListener('click', redo);
 
+$('#btn-add-font').addEventListener('click', () => {
+  const input = $('#font-name-input');
+  const family = input.value.trim().replace(/['"\\]/g, '');
+  if (!family) {
+    alert(t('alert.fontName'));
+    return;
+  }
+  if (site.fonts.some(f => f.family.toLowerCase() === family.toLowerCase())) {
+    input.value = '';
+    return;
+  }
+  mutate(() => { site.fonts.push({ kind: 'google', family }); });
+  input.value = '';
+  applyFontAssets();
+});
+
+$('#btn-upload-font').addEventListener('click', () => $('#file-font').click());
+
+$('#file-font').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const formats = { ttf: 'truetype', otf: 'opentype', woff: 'woff', woff2: 'woff2' };
+  if (!formats[ext]) {
+    alert(t('alert.importError'));
+    return;
+  }
+  const family = file.name.replace(/\.[^.]+$/, '').replace(/['"\\]/g, '') || 'CustomFont';
+  const reader = new FileReader();
+  reader.onload = () => {
+    mutate(() => { site.fonts.push({ kind: 'local', family, dataUrl: String(reader.result), format: formats[ext] }); });
+    applyFontAssets();
+  };
+  reader.readAsDataURL(file);
+});
+
+$('#fonts-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-dfont]');
+  if (!btn) return;
+  const i = +btn.dataset.dfont;
+  const rm = site.fonts[i];
+  if (!rm) return;
+  mutate(() => {
+    site.fonts.splice(i, 1);
+    if (site.fontFamily === rm.family) site.fontFamily = '';
+    site.pages.forEach(p => p.blocks.forEach(b => {
+      if (b.style && b.style.font === rm.family) delete b.style.font;
+    }));
+  }, { inspector: true });
+  applyFontAssets();
+});
+
+$('#default-font-select').addEventListener('change', e => {
+  snapshot();
+  site.fontFamily = e.target.value;
+  persist();
+  $('#canvas').style.fontFamily = site.fontFamily || '';
+  renderFontsPanel();
+});
+
 $('#btn-preview').addEventListener('click', () => {
   previewMode = !previewMode;
   document.body.classList.toggle('preview', previewMode);
@@ -645,8 +769,9 @@ function buildHtml() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(p.title)}</title>
 <style>${SITE_CSS}</style>
+${fontsHeadHtml()}
 </head>
-<body>
+<body${bodyFontAttr()}>
 ${blocks}
 </body>
 </html>`;
@@ -678,8 +803,9 @@ function buildSiteHtml() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(site.pages[0].title)}</title>
 <style>${SITE_CSS}</style>
+${fontsHeadHtml()}
 </head>
-<body>
+<body${bodyFontAttr()}>
 ${nav}
 ${pages}
 ${router}
@@ -709,10 +835,12 @@ function importData(raw) {
   }
   snapshot();
   sanitizeSite(next);
+  ensureFonts(next);
   site = next;
   selectedId = null;
   persist();
   renderAll();
+  applyFontAssets();
 }
 
 $('#file-json').addEventListener('change', e => {
@@ -790,15 +918,18 @@ function loadSite() {
   if (saved && Array.isArray(saved.pages) && saved.pages.length && saved.pages.every(p => p && Array.isArray(p.blocks))) {
     site = saved;
     if (!site.pages.some(p => p.id === site.currentPageId)) site.currentPageId = site.pages[0].id;
+    ensureFonts(site);
     return;
   }
   const legacy = tryParse(localStorage.getItem(LEGACY_KEY));
   if (legacy && Array.isArray(legacy.blocks)) {
     const p = { id: uid(), title: legacy.title || t('sample.title'), blocks: legacy.blocks };
     site = { pages: [p], currentPageId: p.id };
+    ensureFonts(site);
     return;
   }
   site = sampleSite();
+  ensureFonts(site);
 }
 
 function init() {
@@ -811,6 +942,7 @@ function init() {
 
   renderLibrary();
   renderAll();
+  applyFontAssets();
 }
 
 init();

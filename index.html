@@ -48,6 +48,17 @@
     </section>
 
     <aside class="panel right">
+      <h2 data-i18n="app.fonts">Шрифты</h2>
+      <div id="fonts-panel">
+        <div class="font-add-row">
+          <input id="font-name-input" type="text" data-i18n-placeholder="ph.fontName">
+          <button id="btn-add-font" class="btn btn-icon" data-i18n-title="title.addFont">+</button>
+        </div>
+        <button id="btn-upload-font" class="btn-ghost" data-i18n="app.uploadFont">Загрузить с компьютера</button>
+        <input type="file" id="file-font" accept=".ttf,.otf,.woff,.woff2" hidden>
+        <div id="fonts-list"></div>
+        <label class="fld fld-font-default"><span data-i18n="app.defaultFont">Шрифт всего сайта</span><select id="default-font-select"></select></label>
+      </div>
       <h2 data-i18n="app.layers">Слои</h2>
       <div id="layers"></div>
       <h2 data-i18n="app.properties">Свойства</h2>
