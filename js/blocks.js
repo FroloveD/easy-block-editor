@@ -60,14 +60,18 @@ const BLOCK_TYPES = {
     icon: '¶',
     defaults: () => ({ content: t('c.textDefault'), align: 'left' }),
     fields: [
-      { key: 'content', label: t('f.content'), type: 'textarea' },
+      { key: 'content', label: t('f.content'), type: 'rich' },
       { key: 'align', label: t('f.align'), type: 'select', options: ALIGN },
     ],
-    render: p => `<div class="b-container b-section" style="padding-top:24px">
+    render: p => {
+      const raw = String(p.content ?? '');
+      const html = raw.includes('<') ? raw : esc(raw).replace(/\n/g, '<br>');
+      return `<div class="b-container b-section" style="padding-top:24px">
   <div class="b-text" style="text-align:${esc(p.align)};max-width:720px;${p.align === 'center' ? 'margin:0 auto' : ''}">
-    <p>${esc(p.content).replace(/\n/g, '<br>')}</p>
+    ${html}
   </div>
-</div>`,
+</div>`;
+    },
   },
 
   cards: {
